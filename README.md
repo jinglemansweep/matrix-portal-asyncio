@@ -12,6 +12,20 @@ controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product
 
 ![Photo](./docs/photo.jpg)
 
+## Features
+
+- Time and Date display with internet time updates
+- Dynamic randomly generated background scenes
+  - Floor styles (Brick and Rock) and lengths vary
+  - Floor "Underground Level" pallete used at night
+  - Warp pipe location varies
+- Autonomous Mario and Goomba sprites
+  - Mario performs a jumps occasionally
+  - Randomly move in and out of scene
+  - Background scene sometimes regenerates when both sprites are off screen
+- Physical hardware button support
+  - Regenerate background scene
+
 ## Requirements
 
 - [AdaFruit Matrix Portal M4](https://www.adafruit.com/product/4745) RGB LED matrix controller
