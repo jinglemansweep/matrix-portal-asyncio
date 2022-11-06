@@ -12,15 +12,18 @@ SPRITESHEET_FILE = "/app/themes/mario.bmp"
 
 GRAVITY = 0.75
 
-SPRITE_MARIO_STILL = 0
-SPRITE_MARIO_JUMP = 1
-SPRITE_MARIO_WALK1 = 4
-SPRITE_MARIO_WALK2 = 5
-SPRITE_MARIO_WALK3 = 6
-SPRITE_BRICK = 8
-SPRITE_ROCK = 9
-SPRITE_PIPE = 10
-SPRITE_GOOMBA = 12
+SPRITE_MARIO_R_STILL = 0
+SPRITE_MARIO_R_JUMP = 1
+SPRITE_MARIO_R_WALK_START = 2  # 2,3,4
+SPRITE_MARIO_L_STILL = 5
+SPRITE_MARIO_L_JUMP = 6
+SPRITE_MARIO_L_WALK_START = 7  # 7,8,9
+
+SPRITE_BRICK = 10
+SPRITE_ROCK = 11
+SPRITE_PIPE = 12
+SPRITE_GOOMBA_STILL = 15
+SPRITE_GOOMBA_WALK = 16
 
 
 class MarioTheme:
@@ -86,13 +89,11 @@ class MarioTheme:
     async def loop(self, last_pressed=None):
         if last_pressed is not None:
             print("button", last_pressed)
-
         self.label_clock.tick(self.frame)
         self.label_calendar.tick(self.frame)
         self.sprite_mario.tick(self.frame)
         self.sprite_goomba.tick(self.frame)
         self.sprite_pipe.tick(self.frame)
-
         self.frame += 1
 
 
@@ -139,15 +140,18 @@ class CalendarLabel(Label):
 
 
 class MarioSprite(BaseSprite):
+    _name = "mario"
+
     def __init__(self, bitmap, palette, x, y):
         super().__init__(
             bitmap=bitmap,
             palette=palette,
             x=x,
             y=y,
-            default_tile=SPRITE_MARIO_STILL,
+            default_tile=SPRITE_MARIO_R_STILL,
         )
         self.idx_sprite = 0
+        self.x_range = [-32, 96]
         self.y_float = y
         self.is_jumping = False
 
@@ -157,44 +161,40 @@ class MarioSprite(BaseSprite):
             self.y_float -= 10
 
     def tick(self, frame):
-
-        super().tick(frame=frame)
-
         if frame % 800 == 0:
             self.jump()
-
-        if frame % 400 == 0:
-            self.set_velocity(1, 0)
-
-        if frame % 400 == 200:
-            self.stop()
-
+        if self.seed >= 0 and self.seed <= 3:
+            self.move_to(x=random.randint(self.x_range[0], self.x_range[1]))
         if self.is_jumping:
             self.y_float += GRAVITY
-
         if self.y_float > self.y_orig:
             self.y_float = self.y_orig
             self.is_jumping = False
-
         if frame % 4 == 0:
             self.idx_sprite += 1
             if self.idx_sprite > 2:
                 self.idx_sprite = 0
 
+        facing_right = self.x_dest is None or self.x < self.x_dest
+
+        walk_start_idx = (
+            SPRITE_MARIO_R_WALK_START if facing_right else SPRITE_MARIO_L_WALK_START
+        )
+
         self[0] = (
-            SPRITE_MARIO_WALK1 + self.idx_sprite
-            if self.x_velocity > 0
-            else SPRITE_MARIO_JUMP
+            walk_start_idx + self.idx_sprite
+            if self.x_velocity != 0
+            else (SPRITE_MARIO_R_JUMP if facing_right else SPRITE_MARIO_L_JUMP)
             if self.is_jumping
-            else SPRITE_MARIO_STILL
+            else SPRITE_MARIO_R_STILL
         )
         self.y = int(self.y_float)
-
-        if self.x > 64:
-            self.x = -16
+        super().tick(frame)
 
 
 class BrickSprite(BaseSprite):
+    _name = "brick"
+
     def __init__(self, bitmap, palette, x, y, width=1, height=1, underground=False):
         if underground:
             palette = copy_update_palette(
@@ -213,6 +213,8 @@ class BrickSprite(BaseSprite):
 
 
 class RockSprite(BaseSprite):
+    _name = "rock"
+
     def __init__(self, bitmap, palette, x, y, width=1, height=1, underground=False):
         if underground:
             palette = copy_update_palette(
@@ -231,6 +233,8 @@ class RockSprite(BaseSprite):
 
 
 class PipeSprite(BaseSprite):
+    _name = "pipe"
+
     def __init__(self, bitmap, palette, x, y, height=1):
         super().__init__(
             bitmap=bitmap,
@@ -244,27 +248,29 @@ class PipeSprite(BaseSprite):
 
 
 class GoombaSprite(BaseSprite):
+    _name = "goomba"
+
     def __init__(self, bitmap, palette, x, y):
         super().__init__(
             bitmap=bitmap,
             palette=palette,
             x=x,
             y=y,
-            default_tile=SPRITE_GOOMBA,
+            default_tile=SPRITE_GOOMBA_STILL,
         )
         self.x_range = [-32, 96]
-        self.direction = random.randint(-1, 1)
+        self.idx_sprite = 0
 
     def tick(self, frame):
-
-        super().tick(frame=frame)
-
-        if frame % 500 == 0:
-            self.direction = random.randint(-1, 1)
-
-        if self.x <= self.x_range[0]:
-            self.direction = 1
-        if self.x >= self.x_range[1]:
-            self.direction = -1
-
-        self.x = self.x + self.direction
+        if self.seed >= 0 and self.seed <= 5:
+            self.move_to(x=random.randint(self.x_range[0], self.x_range[1]))
+        if frame % 8 == 0:
+            self.idx_sprite += 1
+            if self.idx_sprite > 1:
+                self.idx_sprite = 0
+        self[0] = (
+            SPRITE_GOOMBA_WALK + self.idx_sprite
+            if self.x_velocity != 0
+            else SPRITE_GOOMBA_STILL
+        )
+        super().tick(frame)
