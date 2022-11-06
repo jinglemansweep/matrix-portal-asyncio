@@ -4,7 +4,7 @@ An experimental LED matrix display using the [AdaFruit Matrix Portal M4](https:/
 controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product/2279) driven using a custom
 `asyncio` manager.
 
-![Demo](./docs/demo.gif)
+![Demo](./docs/demo.gif) ![Photo](./docs/photo.jpg)
 
 ## Development
 
