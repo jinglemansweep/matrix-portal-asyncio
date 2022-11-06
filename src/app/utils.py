@@ -1,5 +1,12 @@
 import math
 import time
+import adafruit_imageload
+from displayio import Palette
+from cedargrove_palettefader.palettefader import PaletteFader
+
+PALETTE_GAMMA = 1.0
+PALETTE_BRIGHTNESS = 0.1
+PALETTE_NORMALIZE = True
 
 
 def matrix_rotation(accelerometer):
@@ -19,6 +26,36 @@ def matrix_rotation(accelerometer):
         )
         % 4
     ) * 90
+
+
+def copy_update_palette(palette, updates=None):
+    if updates is None:
+        updates = dict()
+    palette_clone = Palette(len(palette))
+    for i, color in enumerate(palette):
+        if palette.is_transparent(i):
+            palette_clone.make_transparent(i)
+        if i in updates:
+            palette_clone[i] = updates[i]
+        else:
+            palette_clone[i] = color
+    return palette_clone
+
+
+def load_sprites_brightness_adjusted(
+    filename,
+    brightness=PALETTE_BRIGHTNESS,
+    gamma=PALETTE_GAMMA,
+    normalize=PALETTE_NORMALIZE,
+    transparent_index=None,
+):
+    bitmap, palette = adafruit_imageload.load(filename)
+    if transparent_index is not None:
+        palette.make_transparent(transparent_index)
+    palette_adj = PaletteFader(
+        palette, PALETTE_BRIGHTNESS, PALETTE_GAMMA, PALETTE_NORMALIZE
+    )
+    return bitmap, palette_adj.palette
 
 
 def parse_timestamp(timestamp, is_dst=-1):

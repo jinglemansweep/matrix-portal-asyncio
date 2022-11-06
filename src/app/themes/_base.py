@@ -14,10 +14,10 @@ class BaseSprite(TileGrid):
             tile_width=16,
             tile_height=16,
         )
-        self.x_base = x
-        self.y_base = y
-        self.x_velocity = 0
-        self.y_velocity = 0
+        self.x_orig = x  # original sprite X coords
+        self.y_orig = y  # original sprite y coords
+        self.x_velocity = 0  # current sprite x velocity
+        self.y_velocity = 0  # current sprite y velocity
 
     def set_velocity(self, x_velocity=0, y_velocity=0):
         self.x_velocity = x_velocity

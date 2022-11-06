@@ -1,6 +1,7 @@
 import asyncio
 import board
 import busio
+import keypad
 
 from adafruit_matrixportal.matrix import Matrix
 from adafruit_matrixportal.network import Network
@@ -8,7 +9,6 @@ from adafruit_lis3dh import LIS3DH_I2C
 from rtc import RTC
 
 from app.utils import matrix_rotation, parse_timestamp
-
 
 BIT_DEPTH = 6
 NTP_ENABLE = False
@@ -33,6 +33,8 @@ class Manager:
         self.network = Network(status_neopixel=board.NEOPIXEL, debug=debug)
         # Theme
         self.theme = theme(display=self.display)
+        # GPIO Buttons
+        self.last_pressed = None
 
     def run(self):
         print("manager.run")
@@ -51,10 +53,23 @@ class Manager:
         await asyncio.sleep(NTP_INTERVAL)
         asyncio.create_task(self.ntp_update())
 
+    async def check_gpio_buttons(self):
+        with keypad.Keys(
+            (board.BUTTON_UP, board.BUTTON_DOWN), value_when_pressed=False, pull=True
+        ) as keys:
+            while True:
+                key_event = keys.events.get()
+                if key_event and key_event.pressed:
+                    key_number = key_event.key_number
+                    self.last_pressed = key_number
+                await asyncio.sleep(0)
+
     async def loop(self):
         print(f"manager: loop")
         if NTP_ENABLE:
             asyncio.create_task(self.ntp_update())
+        asyncio.create_task(self.check_gpio_buttons())
         while True:
-            asyncio.create_task(self.theme.loop())
+            asyncio.create_task(self.theme.loop(last_pressed=self.last_pressed))
+            self.last_pressed = None
             await asyncio.sleep(ASYNCIO_LOOP_DELAY)
