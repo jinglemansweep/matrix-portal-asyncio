@@ -12,7 +12,15 @@ controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product
 
 ![Photo](./docs/photo.jpg)
 
-## Development
+## Requirements
+
+- [AdaFruit Matrix Portal M4](https://www.adafruit.com/product/4745) RGB LED matrix controller
+- Any compatible 64x32 pixel MOD75 LED matrix panel, such as [AdaFruit 64x32 Matrix](https://www.adafruit.com/product/2279)
+- USB-C (5v/3A) power supply or powered hub
+- WiFi
+- Free [AdaFruit IO](https://io.adafruit.com/) account (for internet time updates)
+
+## Usage
 
 Install a Python `virtualenv` and install the [CircUp](https://github.com/adafruit/circup) library manager:
 
@@ -26,6 +34,30 @@ automatically mounted (e.g. `/media/${USER}/CIRCUITPY`):
     ls /dev/ttyACM0
     ls /media/${USER}/CIRCUITPY
 
-Deploy the project source and other resources to the Matrix Portal:
+Deploy the project source and other resources to the Matrix Portal using the included helper script:
 
     scripts/deploy.sh
+
+Alternatively, the process can be completed manually:
+
+Install project dependencies and libraries using `circup`:
+
+    circup install -r ./requirements.txt
+
+Copy the contents of the `src` directory to the root of your Matrix Portal filesystem (e.g. `/media/${USER}/CIRCUITPY`):
+
+    rsync -rv ./src/ /media/${USER}/CIRCUITPY/
+
+Now create a `secrets.py` file in the same location (e.g. `/media/${USER}/CIRCUITPY/secrets.py`) with the following contents:
+
+    secrets = {
+        "ssid": "<wifi-ssid>",
+        "password": "<wifi-password>",
+        "aio_username": "<adafruit-io-username>",
+        "aio_key": "<adafruit-io-api-key>"
+    }
+
+- Replace `<wifi-ssid>` and `<wifi-password>` with your WiFi network name (SSID) and WPA password/key
+- Replace `<adafruit-io-username>` and `<adafruit-io-api-key`> with your AdaFruit IO username and API key
+
+CircuitPython will automatically restart when files are copied to or changed on the device.
