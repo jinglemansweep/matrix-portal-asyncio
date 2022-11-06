@@ -1,4 +1,5 @@
 import random
+import time
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text.label import Label
 from displayio import Group
@@ -100,11 +101,18 @@ class ClockLabel(Label):
         super().__init__(text="00:00:00", font=font, color=color)
         self.x = x
         self.y = y
+        self.new_second = None
 
     def tick(self, frame):
         now = RTC().datetime
-        hhmmss = "{:0>2d}:{:0>2d}:{:0>2d}".format(now.tm_hour, now.tm_min, now.tm_sec)
-        self.text = hhmmss
+        ts = time.monotonic()
+        if self.new_second is None or ts > self.new_second + 1:
+            self.new_second = ts
+            hhmmss = "{:0>2d}:{:0>2d}:{:0>2d}".format(
+                now.tm_hour, now.tm_min, now.tm_sec
+            )
+            self.text = hhmmss
+            print("hhmmss", hhmmss)
 
 
 class CalendarLabel(Label):
@@ -112,11 +120,19 @@ class CalendarLabel(Label):
         super().__init__(text="00/00", font=font, color=color)
         self.x = x
         self.y = y
+        self.new_hour = None
+        self.new_second = None
 
     def tick(self, frame):
         now = RTC().datetime
-        ddmm = "{:0>2d}/{:0>2d}".format(now.tm_day, now.tm_mon)
-        self.text = ddmm
+        ts = time.monotonic()
+        if self.new_second is None or ts > self.new_second + 1:
+            self.new_second = ts
+            if self.new_hour is None or now.tm_min == 0:
+                self.new_hour = ts
+                ddmm = "{:0>2d}/{:0>2d}".format(now.tm_mday, now.tm_mon)
+                self.text = ddmm
+                print("ddmm", ddmm)
 
 
 class MarioSprite(BaseSprite):
@@ -233,17 +249,19 @@ class GoombaSprite(BaseSprite):
             y=y,
             default_tile=SPRITE_GOOMBA,
         )
-        self.range = 10
+        self.x_range = [-16, 32]
+        self.direction = random.randint(-1, 1)
 
     def tick(self, frame):
 
         super().tick(frame=frame)
 
-        if frame % 10 == 0:
-            dir = random.randint(-1, 1)
-            x = self.x + dir
-            if x > self.x_orig + self.range:
-                x = self.x_orig + self.range
-            if x < self.x_orig - self.range:
-                x = self.x_orig - self.range
-            self.x = x
+        if frame % 500 == 0:
+            self.direction = random.randint(-1, 1)
+
+        if self.x <= self.x_range[0]:
+            self.direction = 1
+        if self.x >= self.x_range[1]:
+            self.direction = -1
+
+        self.x = self.x + self.direction
