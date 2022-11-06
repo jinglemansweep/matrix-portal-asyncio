@@ -31,8 +31,8 @@ controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product
 - [AdaFruit Matrix Portal M4](https://www.adafruit.com/product/4745) RGB LED matrix controller
 - Any compatible 64x32 pixel MOD75 LED matrix panel, such as [AdaFruit 64x32 Matrix](https://www.adafruit.com/product/2279)
 - USB-C (5v/3A) power supply or powered hub
-- WiFi
 - Free [AdaFruit IO](https://io.adafruit.com/) account (for internet time updates)
+- WiFi access point
 
 ## Usage
 
