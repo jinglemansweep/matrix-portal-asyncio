@@ -112,7 +112,6 @@ class ClockLabel(Label):
                 now.tm_hour, now.tm_min, now.tm_sec
             )
             self.text = hhmmss
-            print("hhmmss", hhmmss)
 
 
 class CalendarLabel(Label):
@@ -121,6 +120,7 @@ class CalendarLabel(Label):
         self.x = x
         self.y = y
         self.new_hour = None
+        self.new_minute = None
         self.new_second = None
 
     def tick(self, frame):
@@ -128,11 +128,14 @@ class CalendarLabel(Label):
         ts = time.monotonic()
         if self.new_second is None or ts > self.new_second + 1:
             self.new_second = ts
-            if self.new_hour is None or now.tm_min == 0:
-                self.new_hour = ts
-                ddmm = "{:0>2d}/{:0>2d}".format(now.tm_mday, now.tm_mon)
-                self.text = ddmm
-                print("ddmm", ddmm)
+            if self.new_minute is None or now.tm_sec == 0:
+                self.new_minute = ts
+                print("new minute")
+                if self.new_hour is None or now.tm_min == 0:
+                    self.new_hour = ts
+                    ddmm = "{:0>2d}/{:0>2d}".format(now.tm_mday, now.tm_mon)
+                    self.text = ddmm
+                    print("new hour")
 
 
 class MarioSprite(BaseSprite):
@@ -249,7 +252,7 @@ class GoombaSprite(BaseSprite):
             y=y,
             default_tile=SPRITE_GOOMBA,
         )
-        self.x_range = [-16, 32]
+        self.x_range = [-32, 96]
         self.direction = random.randint(-1, 1)
 
     def tick(self, frame):
