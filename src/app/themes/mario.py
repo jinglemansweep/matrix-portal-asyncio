@@ -8,8 +8,6 @@ from rtc import RTC
 from app.themes._base import BaseSprite, BaseTheme
 from app.utils import load_sprites_brightness_adjusted, copy_update_palette
 
-SPRITESHEET_FILE = "/app/themes/mario.bmp"
-
 GRAVITY = 0.75
 
 SPRITE_MARIO_R_STILL = 0
@@ -24,6 +22,9 @@ SPRITE_ROCK = 11
 SPRITE_PIPE = 12
 SPRITE_GOOMBA_STILL = 15
 SPRITE_GOOMBA_WALK = 16
+
+BUTTON_UP = 0
+BUTTON_DOWN = 1
 
 
 class MarioTheme(BaseTheme):
@@ -44,7 +45,7 @@ class MarioTheme(BaseTheme):
         # Primitives
         self.group_root = Group()
         # Background
-        self.group_root.append(self.build_random_background_group())
+        self.group_root.append(Group())  # empty placeholder group for now
         # Actors
         group_actors = Group()
         self.sprite_goomba = GoombaSprite(
@@ -64,14 +65,24 @@ class MarioTheme(BaseTheme):
         group_labels.append(self.label_calendar)
         self.group_root.append(group_labels)
         # Render Display
+        await self.update_background()
+
+    async def update_background(self):
+        self.group_root[0] = self.build_random_background_group()
         self.display.show(self.group_root)
 
     async def loop(self, button=None):
-        if self.frame % 1000 == 0:
-            self.group_root[0] = self.build_random_background_group()
-            self.display.show(self.group_root)
+        if self.frame % 500 == 0:
+            if (self.sprite_mario.x <= -16 or self.sprite_mario.x >= 64) and (
+                self.sprite_goomba.x <= -16 or self.sprite_goomba.x >= 64
+            ):
+                print(
+                    f"THEME::LOOP - mario (x: {self.sprite_mario.x}) and goomba (x: {self.sprite_goomba.x}) off screen, regenerating background"
+                )
+                await self.update_background()
         if button is not None:
-            print("button", button)
+            print(f"THEME::BUTTON - button:{button}")
+            await self.update_background()
         self.label_clock.tick(self.frame)
         self.label_calendar.tick(self.frame)
         self.sprite_mario.tick(self.frame)
@@ -89,7 +100,7 @@ class MarioTheme(BaseTheme):
             x=0,
             y=24,
             width=len_brick,
-            underground=now.tm_hour >= 16,
+            underground=now.tm_hour >= 16 or now.tm_hour <= 8,
         )
         group.append(floor_brick)
         floor_rock = RockSprite(
@@ -98,7 +109,7 @@ class MarioTheme(BaseTheme):
             x=len_brick * 16,
             y=24,
             width=4 - len_brick,
-            underground=now.tm_hour >= 20,
+            underground=now.tm_hour >= 20 or now.tm_hour <= 6,
         )
         group.append(floor_rock)
         pipe = PipeSprite(
@@ -142,12 +153,12 @@ class CalendarLabel(Label):
             self.new_second = ts
             if self.new_minute is None or now.tm_sec == 0:
                 self.new_minute = ts
-                print("new minute")
+                # print("new minute")
                 if self.new_hour is None or now.tm_min == 0:
                     self.new_hour = ts
                     ddmm = "{:0>2d}/{:0>2d}".format(now.tm_mday, now.tm_mon)
                     self.text = ddmm
-                    print("new hour")
+                    # print("new hour")
 
 
 class MarioSprite(BaseSprite):
@@ -200,6 +211,35 @@ class MarioSprite(BaseSprite):
             else SPRITE_MARIO_R_STILL
         )
         self.y = int(self.y_float)
+        super().tick(frame)
+
+
+class GoombaSprite(BaseSprite):
+    _name = "goomba"
+
+    def __init__(self, bitmap, palette, x, y):
+        super().__init__(
+            bitmap=bitmap,
+            palette=palette,
+            x=x,
+            y=y,
+            default_tile=SPRITE_GOOMBA_STILL,
+        )
+        self.x_range = [-32, 96]
+        self.idx_sprite = 0
+
+    def tick(self, frame):
+        if self.seed >= 0 and self.seed <= 5:
+            self.move_to(x=random.randint(self.x_range[0], self.x_range[1]))
+        if frame % 8 == 0:
+            self.idx_sprite += 1
+            if self.idx_sprite > 1:
+                self.idx_sprite = 0
+        self[0] = (
+            SPRITE_GOOMBA_WALK + self.idx_sprite
+            if self.x_velocity != 0
+            else SPRITE_GOOMBA_STILL
+        )
         super().tick(frame)
 
 
@@ -256,32 +296,3 @@ class PipeSprite(BaseSprite):
             height=height,
             default_tile=SPRITE_PIPE,
         )
-
-
-class GoombaSprite(BaseSprite):
-    _name = "goomba"
-
-    def __init__(self, bitmap, palette, x, y):
-        super().__init__(
-            bitmap=bitmap,
-            palette=palette,
-            x=x,
-            y=y,
-            default_tile=SPRITE_GOOMBA_STILL,
-        )
-        self.x_range = [-32, 96]
-        self.idx_sprite = 0
-
-    def tick(self, frame):
-        if self.seed >= 0 and self.seed <= 5:
-            self.move_to(x=random.randint(self.x_range[0], self.x_range[1]))
-        if frame % 8 == 0:
-            self.idx_sprite += 1
-            if self.idx_sprite > 1:
-                self.idx_sprite = 0
-        self[0] = (
-            SPRITE_GOOMBA_WALK + self.idx_sprite
-            if self.x_velocity != 0
-            else SPRITE_GOOMBA_STILL
-        )
-        super().tick(frame)

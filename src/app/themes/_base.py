@@ -38,7 +38,7 @@ class BaseSprite(TileGrid):
         self.y_dest = None  # current destination y coord to move to on tick
 
     def move_to(self, x=None, y=None):
-        print(f"{self._name} move_to: x={x} y={y}")
+        # print(f"{self._name} move_to: x={x} y={y}")
         if x is not None:
             self.x_dest = x
         if y is not None:
