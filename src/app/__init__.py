@@ -11,7 +11,7 @@ from rtc import RTC
 from app.utils import matrix_rotation, parse_timestamp
 
 BIT_DEPTH = 6
-NTP_ENABLE = False
+NTP_ENABLE = True
 NTP_INTERVAL = 60 * 60  # 1h
 ASYNCIO_LOOP_DELAY = 0.02  # secs
 
