@@ -4,6 +4,8 @@ An experimental LED matrix display using the [AdaFruit Matrix Portal M4](https:/
 controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product/2279) driven using a custom
 `asyncio` manager.
 
+![Video](./docs/demo.mp4)
+
 ## Development
 
 Install a Python `virtualenv` and install the [CircUp](https://github.com/adafruit/circup) library manager:
