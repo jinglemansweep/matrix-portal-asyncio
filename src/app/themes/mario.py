@@ -1,5 +1,9 @@
 import random
+from adafruit_bitmap_font import bitmap_font
+from adafruit_display_text.label import Label
 from displayio import Group
+from rtc import RTC
+
 from app.themes._base import BaseSprite
 from app.utils import load_sprites_brightness_adjusted, copy_update_palette
 
@@ -25,11 +29,12 @@ class MarioTheme:
         self.bitmap, self.palette = load_sprites_brightness_adjusted(
             SPRITESHEET_FILE, transparent_index=31
         )
+        self.font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
         # Primitives
         root = Group()
         # Ground
         group_floor = Group()
-        self.floor_brick = BrickSprite(
+        self.sprite_floor_brick = BrickSprite(
             bitmap=self.bitmap,
             palette=self.palette,
             x=0,
@@ -37,42 +42,81 @@ class MarioTheme:
             width=3,
             underground=True,
         )
-        group_floor.append(self.floor_brick)
-        self.floor_rock = RockSprite(
+        group_floor.append(self.sprite_floor_brick)
+        self.sprite_floor_rock = RockSprite(
             bitmap=self.bitmap,
             palette=self.palette,
             x=48,
             y=24,
             width=1,
         )
-        group_floor.append(self.floor_rock)
+        group_floor.append(self.sprite_floor_rock)
         root.append(group_floor)
         # Items
         group_items = Group()
-        self.item_pipe = PipeSprite(bitmap=self.bitmap, palette=self.palette, x=48, y=8)
-        group_floor.append(self.item_pipe)
+        self.sprite_pipe = PipeSprite(
+            bitmap=self.bitmap, palette=self.palette, x=48, y=8
+        )
+        group_floor.append(self.sprite_pipe)
         root.append(group_items)
         # Actors
         group_actors = Group()
-        self.goomba = GoombaSprite(bitmap=self.bitmap, palette=self.palette, x=24, y=8)
-        group_actors.append(self.goomba)
-        self.mario = MarioSprite(bitmap=self.bitmap, palette=self.palette, x=0, y=8)
-        group_actors.append(self.mario)
+        self.sprite_goomba = GoombaSprite(
+            bitmap=self.bitmap, palette=self.palette, x=24, y=8
+        )
+        group_actors.append(self.sprite_goomba)
+        self.sprite_mario = MarioSprite(
+            bitmap=self.bitmap, palette=self.palette, x=0, y=8
+        )
+        group_actors.append(self.sprite_mario)
         root.append(group_actors)
+        # Labels
+        group_labels = Group()
+        self.label_clock = ClockLabel(31, 3, font=self.font_bitocra)
+        group_labels.append(self.label_clock)
+        self.label_calendar = CalendarLabel(1, 3, font=self.font_bitocra)
+        group_labels.append(self.label_calendar)
+        root.append(group_labels)
         # Properties
         self.frame = 0
         # Render Display
         self.display.show(root)
 
     async def loop(self, last_pressed=None):
-
-        self.mario.tick(self.frame)
-        self.goomba.tick(self.frame)
-        self.item_pipe.tick(self.frame)
         if last_pressed is not None:
-            self.camera.y += 1 if last_pressed == 1 else -1
-            print(self.camera.y)
+            print("button", last_pressed)
+
+        self.label_clock.tick(self.frame)
+        self.label_calendar.tick(self.frame)
+        self.sprite_mario.tick(self.frame)
+        self.sprite_goomba.tick(self.frame)
+        self.sprite_pipe.tick(self.frame)
+
         self.frame += 1
+
+
+class ClockLabel(Label):
+    def __init__(self, x, y, font, color=0x111111):
+        super().__init__(text="00:00:00", font=font, color=color)
+        self.x = x
+        self.y = y
+
+    def tick(self, frame):
+        now = RTC().datetime
+        hhmmss = "{:0>2d}:{:0>2d}:{:0>2d}".format(now.tm_hour, now.tm_min, now.tm_sec)
+        self.text = hhmmss
+
+
+class CalendarLabel(Label):
+    def __init__(self, x, y, font, color=0x001100):
+        super().__init__(text="00/00", font=font, color=color)
+        self.x = x
+        self.y = y
+
+    def tick(self, frame):
+        now = RTC().datetime
+        ddmm = "{:0>2d}/{:0>2d}".format(now.tm_day, now.tm_mon)
+        self.text = ddmm
 
 
 class MarioSprite(BaseSprite):
@@ -84,7 +128,7 @@ class MarioSprite(BaseSprite):
             y=y,
             default_tile=SPRITE_MARIO_STILL,
         )
-        self.sprite_idx = 0
+        self.idx_sprite = 0
         self.y_float = y
         self.is_jumping = False
 
@@ -113,13 +157,13 @@ class MarioSprite(BaseSprite):
             self.y_float = self.y_orig
             self.is_jumping = False
 
-        if frame % 3 == 0:
-            self.sprite_idx += 1
-            if self.sprite_idx > 2:
-                self.sprite_idx = 0
+        if frame % 4 == 0:
+            self.idx_sprite += 1
+            if self.idx_sprite > 2:
+                self.idx_sprite = 0
 
         self[0] = (
-            SPRITE_MARIO_WALK1 + self.sprite_idx
+            SPRITE_MARIO_WALK1 + self.idx_sprite
             if self.x_velocity > 0
             else SPRITE_MARIO_JUMP
             if self.is_jumping

@@ -11,7 +11,7 @@ from rtc import RTC
 from app.utils import matrix_rotation, parse_timestamp
 
 BIT_DEPTH = 6
-NTP_ENABLE = False
+NTP_ENABLE = True
 NTP_INTERVAL = 60 * 60  # 1h
 ASYNCIO_LOOP_DELAY = 0.005  # secs
 
@@ -19,8 +19,6 @@ ASYNCIO_LOOP_DELAY = 0.005  # secs
 class Manager:
     def __init__(self, theme, debug=False):
         print("manager: init", theme, debug)
-        # Real-Time Clock
-        self.rtc = RTC()
         # RGB Matrix
         self.matrix = Matrix(bit_depth=BIT_DEPTH)
         # Accelerometer
@@ -49,7 +47,7 @@ class Manager:
         timestamp = self.network.get_local_time()
         print(f"manager: ntp set: {timestamp}, retrying in {NTP_INTERVAL}s")
         timetuple = parse_timestamp(timestamp)
-        self.rtc.datetime = timetuple
+        RTC().datetime = timetuple
         await asyncio.sleep(NTP_INTERVAL)
         asyncio.create_task(self.ntp_update())
 
