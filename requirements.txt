@@ -1,0 +1,13 @@
+adafruit_lis3dh==5.1.18
+adafruit_ntp==3.0.8
+neopixel==6.3.6
+adafruit_ticks==1.0.8
+adafruit_bitmap_font==1.5.11
+adafruit_display_text==2.22.12
+adafruit_imageload==1.16.8
+adafruit_io==5.6.12
+adafruit_matrixportal==3.0.10
+adafruit_minimqtt==5.5.2
+adafruit_portalbase==1.14.4
+asyncio==0.5.17
+cedargrove_palettefader==1.1.0

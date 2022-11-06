@@ -1,0 +1,5 @@
+secrets.py
+secrets.sh
+.backup
+__pycache__
+venv
