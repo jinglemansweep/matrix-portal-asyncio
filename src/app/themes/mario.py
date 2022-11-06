@@ -67,10 +67,6 @@ class MarioTheme(BaseTheme):
         # Render Display
         await self.update_background()
 
-    async def update_background(self):
-        self.group_root[0] = self.build_random_background_group()
-        self.display.show(self.group_root)
-
     async def loop(self, button=None):
         if self.frame % 500 == 0:
             if (self.sprite_mario.x <= -16 or self.sprite_mario.x >= 64) and (
@@ -90,7 +86,11 @@ class MarioTheme(BaseTheme):
         # Call base loop at end of function (to increment frame index etc)
         await super().loop(button)
 
-    def build_random_background_group(self):
+    async def update_background(self):
+        self.group_root[0] = self._build_random_background_group()
+        self.display.show(self.group_root)
+
+    def _build_random_background_group(self):
         now = RTC().datetime
         len_brick = random.randint(1, 3)
         group = Group()
