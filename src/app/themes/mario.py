@@ -1,3 +1,4 @@
+import random
 import adafruit_imageload
 from cedargrove_palettefader.palettefader import PaletteFader
 from displayio import Group
@@ -11,13 +12,15 @@ PALETTE_NORMALIZE = True
 
 GRAVITY = 0.75
 
-SPRITE_BRICK = 1
-SPRITE_ROCK = 2
 SPRITE_MARIO_STILL = 0
-SPRITE_MARIO_JUMP = 4
-SPRITE_MARIO_WALK1 = 5
-SPRITE_MARIO_WALK2 = 6
-SPRITE_MARIO_WALK3 = 7
+SPRITE_MARIO_JUMP = 1
+SPRITE_MARIO_WALK1 = 4
+SPRITE_MARIO_WALK2 = 5
+SPRITE_MARIO_WALK3 = 6
+SPRITE_BRICK = 8
+SPRITE_ROCK = 9
+SPRITE_PIPE = 10
+SPRITE_GOOMBA = 12
 
 
 class MarioTheme:
@@ -25,24 +28,31 @@ class MarioTheme:
         # Display & Resources
         self.display = display
         self.bitmap, bitmap_palette = adafruit_imageload.load(SPRITESHEET_FILE)
-        bitmap_palette.make_transparent(255)
+        bitmap_palette.make_transparent(31)
         self.palette = PaletteFader(
             bitmap_palette, PALETTE_BRIGHTNESS, PALETTE_GAMMA, PALETTE_NORMALIZE
-        )
+        ).palette
         # Primitives
         root = Group()
-        group_actors = Group()
-        self.mario = MarioSprite(
-            bitmap=self.bitmap, palette=self.palette.palette, x=0, y=8
-        )
-        group_actors.append(self.mario)
-        root.append(group_actors)
+        # Ground
         group_floor = Group()
         self.floor_brick = BrickSprite(
             bitmap=self.bitmap, palette=self.palette, x=0, y=24, width=4
         )
         group_floor.append(self.floor_brick)
         root.append(group_floor)
+        # Items
+        group_items = Group()
+        self.item_pipe = PipeSprite(bitmap=self.bitmap, palette=self.palette, x=48, y=8)
+        group_floor.append(self.item_pipe)
+        root.append(group_items)
+        # Actors
+        group_actors = Group()
+        self.goomba = GoombaSprite(bitmap=self.bitmap, palette=self.palette, x=24, y=8)
+        group_actors.append(self.goomba)
+        self.mario = MarioSprite(bitmap=self.bitmap, palette=self.palette, x=0, y=8)
+        group_actors.append(self.mario)
+        root.append(group_actors)
         # Properties
         self.frame = 0
         # Render Display
@@ -50,6 +60,7 @@ class MarioTheme:
 
     async def loop(self):
         self.mario.tick(self.frame)
+        self.goomba.tick(self.frame)
         self.frame += 1
 
 
@@ -113,7 +124,7 @@ class BrickSprite(BaseSprite):
     def __init__(self, bitmap, palette, x, y, width=1, height=1):
         super().__init__(
             bitmap=bitmap,
-            palette=palette.palette,
+            palette=palette,
             x=x,
             y=y,
             width=width,
@@ -126,10 +137,48 @@ class RockSprite(BaseSprite):
     def __init__(self, bitmap, palette, x, y, width=1, height=1):
         super().__init__(
             bitmap=bitmap,
-            palette=palette.palette,
+            palette=palette,
             x=x,
             y=y,
             width=width,
             height=height,
             default_tile=SPRITE_ROCK,
         )
+
+
+class PipeSprite(BaseSprite):
+    def __init__(self, bitmap, palette, x, y, height=1):
+        super().__init__(
+            bitmap=bitmap,
+            palette=palette,
+            x=x,
+            y=y,
+            width=1,
+            height=height,
+            default_tile=SPRITE_PIPE,
+        )
+
+
+class GoombaSprite(BaseSprite):
+    def __init__(self, bitmap, palette, x, y):
+        super().__init__(
+            bitmap=bitmap,
+            palette=palette,
+            x=x,
+            y=y,
+            default_tile=SPRITE_GOOMBA,
+        )
+        self.range = 10
+
+    def tick(self, frame):
+
+        super().tick(frame=frame)
+
+        if frame % 10 == 0:
+            dir = random.randint(-1, 1)
+            x = self.x + dir
+            if x > self.x_base + self.range:
+                x = self.x_base + self.range
+            if x < self.x_base - self.range:
+                x = self.x_base - self.range
+            self.x = x
