@@ -34,12 +34,6 @@ automatically mounted (e.g. `/media/${USER}/CIRCUITPY`):
     ls /dev/ttyACM0
     ls /media/${USER}/CIRCUITPY
 
-Deploy the project source and other resources to the Matrix Portal using the included helper script:
-
-    scripts/deploy.sh
-
-Alternatively, the process can be completed manually:
-
 Install project dependencies and libraries using `circup`:
 
     circup install -r ./requirements.txt
