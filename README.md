@@ -1,10 +1,10 @@
-# Matrix Portal M4 `asyncio` Experiment
+# Matrix Portal M4 Experiment (asyncio)
 
 An experimental LED matrix display using the [AdaFruit Matrix Portal M4](https://www.adafruit.com/product/4745)
 controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product/2279) driven using a custom
 `asyncio` manager.
 
-![Video](./docs/demo.mp4)
+![Demo](./docs/demo.gif)
 
 ## Development
 
