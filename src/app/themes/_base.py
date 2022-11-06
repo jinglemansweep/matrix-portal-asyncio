@@ -1,6 +1,8 @@
 import random
 from displayio import TileGrid
 
+class BaseTheme
+
 
 class BaseSprite(TileGrid):
     _name = "sprite"

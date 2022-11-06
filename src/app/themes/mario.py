@@ -34,6 +34,8 @@ class MarioTheme:
             SPRITESHEET_FILE, transparent_index=31
         )
         self.font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
+
+    async def setup(self):
         # Primitives
         root = Group()
         # Ground

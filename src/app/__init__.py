@@ -11,14 +11,14 @@ from rtc import RTC
 from app.utils import matrix_rotation, parse_timestamp
 
 BIT_DEPTH = 6
-NTP_ENABLE = True
+NTP_ENABLE = False
 NTP_INTERVAL = 60 * 60  # 1h
 ASYNCIO_LOOP_DELAY = 0.02  # secs
 
 
 class Manager:
     def __init__(self, theme, debug=False):
-        print("manager: init", theme, debug)
+        print(f"MANAGER::INIT theme={theme} debug={debug}")
         # RGB Matrix
         self.matrix = Matrix(bit_depth=BIT_DEPTH)
         # Accelerometer
@@ -35,17 +35,17 @@ class Manager:
         self.last_pressed = None
 
     def run(self):
-        print("manager.run")
+        print(f"MANAGER::RUN")
         while True:
             try:
                 asyncio.run(self.loop())
             finally:
-                print("manager: asyncio crash, restarting")
+                print(f"MANAGER::ERROR - asyncio crash, restarting")
                 asyncio.new_event_loop()
 
     async def ntp_update(self):
         timestamp = self.network.get_local_time()
-        print(f"manager: ntp set: {timestamp}, retrying in {NTP_INTERVAL}s")
+        print(f"MANAGER::NTP - set: {timestamp}, retrying in {NTP_INTERVAL}s")
         timetuple = parse_timestamp(timestamp)
         RTC().datetime = timetuple
         await asyncio.sleep(NTP_INTERVAL)
@@ -63,11 +63,12 @@ class Manager:
                 await asyncio.sleep(0)
 
     async def loop(self):
-        print(f"manager: loop")
+        print(f"MANAGER::LOOP")
         if NTP_ENABLE:
             asyncio.create_task(self.ntp_update())
         asyncio.create_task(self.check_gpio_buttons())
+        await asyncio.create_task(self.theme.setup())
         while True:
-            asyncio.create_task(self.theme.loop(last_pressed=self.last_pressed))
+            await asyncio.create_task(self.theme.loop(last_pressed=self.last_pressed))
             self.last_pressed = None
             await asyncio.sleep(ASYNCIO_LOOP_DELAY)
