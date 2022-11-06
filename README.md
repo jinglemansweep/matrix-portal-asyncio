@@ -65,6 +65,6 @@ Now create a `secrets.py` file in the same location (e.g. `/media/${USER}/CIRCUI
     }
 
 - Replace `<wifi-ssid>` and `<wifi-password>` with your WiFi network name (SSID) and WPA password/key
-- Replace `<adafruit-io-username>` and `<adafruit-io-api-key`> with your AdaFruit IO username and API key
+- Replace `<adafruit-io-username>` and `<adafruit-io-api-key`> with your [AdaFruit IO](https://io.adafruit.com/) username and API key
 
 CircuitPython will automatically restart when files are copied to or changed on the device.
