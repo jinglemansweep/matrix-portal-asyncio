@@ -13,7 +13,7 @@ from app.utils import matrix_rotation, parse_timestamp
 BIT_DEPTH = 6
 NTP_ENABLE = False
 NTP_INTERVAL = 60 * 60  # 1h
-ASYNCIO_LOOP_DELAY = 0.01  # secs
+ASYNCIO_LOOP_DELAY = 0.005  # secs
 
 
 class Manager:
@@ -55,7 +55,6 @@ class Manager:
         print(f"manager: loop")
         if NTP_ENABLE:
             asyncio.create_task(self.ntp_update())
-        asyncio.create_task(self.theme.init())
         while True:
             asyncio.create_task(self.theme.loop())
             await asyncio.sleep(ASYNCIO_LOOP_DELAY)
