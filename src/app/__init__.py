@@ -11,7 +11,7 @@ from rtc import RTC
 from app.utils import matrix_rotation, parse_timestamp
 
 BIT_DEPTH = 6
-NTP_ENABLE = False
+NTP_ENABLE = True
 NTP_INTERVAL = 60 * 60  # 1h
 ASYNCIO_LOOP_DELAY = 0.02  # secs
 
@@ -69,6 +69,6 @@ class Manager:
         asyncio.create_task(self.check_gpio_buttons())
         await asyncio.create_task(self.theme.setup())
         while True:
-            await asyncio.create_task(self.theme.loop(last_pressed=self.last_pressed))
+            await asyncio.create_task(self.theme.loop(button=self.last_pressed))
             self.last_pressed = None
             await asyncio.sleep(ASYNCIO_LOOP_DELAY)

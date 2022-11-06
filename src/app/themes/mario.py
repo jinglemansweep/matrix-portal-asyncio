@@ -5,7 +5,7 @@ from adafruit_display_text.label import Label
 from displayio import Group
 from rtc import RTC
 
-from app.themes._base import BaseSprite
+from app.themes._base import BaseSprite, BaseTheme
 from app.utils import load_sprites_brightness_adjusted, copy_update_palette
 
 SPRITESHEET_FILE = "/app/themes/mario.bmp"
@@ -26,45 +26,25 @@ SPRITE_GOOMBA_STILL = 15
 SPRITE_GOOMBA_WALK = 16
 
 
-class MarioTheme:
+class MarioTheme(BaseTheme):
+    spritesheet_file = "/app/themes/mario.bmp"
+
     def __init__(self, display):
+        super().__init__(display)
         # Display & Resources
         self.display = display
         self.bitmap, self.palette = load_sprites_brightness_adjusted(
-            SPRITESHEET_FILE, transparent_index=31
+            self.spritesheet_file, transparent_index=31
         )
         self.font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
 
     async def setup(self):
+        # Call base setup
+        await super().setup()
         # Primitives
-        root = Group()
-        # Ground
-        group_floor = Group()
-        self.sprite_floor_brick = BrickSprite(
-            bitmap=self.bitmap,
-            palette=self.palette,
-            x=0,
-            y=24,
-            width=3,
-            underground=True,
-        )
-        group_floor.append(self.sprite_floor_brick)
-        self.sprite_floor_rock = RockSprite(
-            bitmap=self.bitmap,
-            palette=self.palette,
-            x=48,
-            y=24,
-            width=1,
-        )
-        group_floor.append(self.sprite_floor_rock)
-        root.append(group_floor)
-        # Items
-        group_items = Group()
-        self.sprite_pipe = PipeSprite(
-            bitmap=self.bitmap, palette=self.palette, x=48, y=8
-        )
-        group_floor.append(self.sprite_pipe)
-        root.append(group_items)
+        self.group_root = Group()
+        # Background
+        self.group_root.append(self.build_random_background_group())
         # Actors
         group_actors = Group()
         self.sprite_goomba = GoombaSprite(
@@ -75,28 +55,57 @@ class MarioTheme:
             bitmap=self.bitmap, palette=self.palette, x=0, y=8
         )
         group_actors.append(self.sprite_mario)
-        root.append(group_actors)
+        self.group_root.append(group_actors)
         # Labels
         group_labels = Group()
         self.label_clock = ClockLabel(31, 3, font=self.font_bitocra)
         group_labels.append(self.label_clock)
         self.label_calendar = CalendarLabel(1, 3, font=self.font_bitocra)
         group_labels.append(self.label_calendar)
-        root.append(group_labels)
-        # Properties
-        self.frame = 0
+        self.group_root.append(group_labels)
         # Render Display
-        self.display.show(root)
+        self.display.show(self.group_root)
 
-    async def loop(self, last_pressed=None):
-        if last_pressed is not None:
-            print("button", last_pressed)
+    async def loop(self, button=None):
+        if self.frame % 1000 == 0:
+            self.group_root[0] = self.build_random_background_group()
+            self.display.show(self.group_root)
+        if button is not None:
+            print("button", button)
         self.label_clock.tick(self.frame)
         self.label_calendar.tick(self.frame)
         self.sprite_mario.tick(self.frame)
         self.sprite_goomba.tick(self.frame)
-        self.sprite_pipe.tick(self.frame)
-        self.frame += 1
+        # Call base loop at end of function (to increment frame index etc)
+        await super().loop(button)
+
+    def build_random_background_group(self):
+        now = RTC().datetime
+        len_brick = random.randint(1, 3)
+        group = Group()
+        floor_brick = BrickSprite(
+            bitmap=self.bitmap,
+            palette=self.palette,
+            x=0,
+            y=24,
+            width=len_brick,
+            underground=now.tm_hour >= 16,
+        )
+        group.append(floor_brick)
+        floor_rock = RockSprite(
+            bitmap=self.bitmap,
+            palette=self.palette,
+            x=len_brick * 16,
+            y=24,
+            width=4 - len_brick,
+            underground=now.tm_hour >= 20,
+        )
+        group.append(floor_rock)
+        pipe = PipeSprite(
+            bitmap=self.bitmap, palette=self.palette, x=random.randint(0, 48), y=8
+        )
+        group.append(pipe)
+        return group
 
 
 class ClockLabel(Label):

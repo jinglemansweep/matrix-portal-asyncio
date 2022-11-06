@@ -1,7 +1,17 @@
 import random
 from displayio import TileGrid
 
-class BaseTheme
+
+class BaseTheme:
+    def __init__(self, display):
+        self.display = display
+        self.frame = 0
+
+    async def setup(self):
+        pass
+
+    async def loop(self, button=None):
+        self.frame += 1
 
 
 class BaseSprite(TileGrid):
