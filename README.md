@@ -22,14 +22,13 @@ controller and a [64x32 MOD75 LED Matrix Panel](https://www.adafruit.com/product
 
 ## Usage
 
-Install a Python `virtualenv` and install the [CircUp](https://github.com/adafruit/circup) library manager:
+Create a Python `virtualenv` and install the [CircUp](https://github.com/adafruit/circup) library manager:
 
     python -m venv ./venv
     source ./venv/bin/activate
     pip install circup
 
-Connect Matrix Portal M4 to device and confirm USB device is connected and
-automatically mounted (e.g. `/media/${USER}/CIRCUITPY`):
+Connect the Matrix Portal M4 to device and confirm USB device is connected and automatically mounted (e.g. `/media/${USER}/CIRCUITPY`):
 
     ls /dev/ttyACM0
     ls /media/${USER}/CIRCUITPY
@@ -38,7 +37,7 @@ Install project dependencies and libraries using `circup`:
 
     circup install -r ./requirements.txt
 
-Copy the contents of the `src` directory to the root of your Matrix Portal filesystem (e.g. `/media/${USER}/CIRCUITPY`):
+Copy the contents of the `src` directory to the root of your Matrix Portal M4 filesystem (e.g. `/media/${USER}/CIRCUITPY`):
 
     rsync -rv ./src/ /media/${USER}/CIRCUITPY/
 
