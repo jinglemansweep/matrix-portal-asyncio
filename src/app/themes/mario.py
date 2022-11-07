@@ -193,6 +193,7 @@ class MarioSprite(BaseSprite):
         self.x_range = [-32, 96]
         self.y_float = y
         self.is_jumping = False
+        self.x_dir_last = 1
 
     def jump(self):
         if not self.is_jumping:
@@ -214,7 +215,7 @@ class MarioSprite(BaseSprite):
             if self.idx_sprite > 2:
                 self.idx_sprite = 0
 
-        facing_right = self.x_dest is None or self.x < self.x_dest
+        facing_right = self.x_dir_last > 0
 
         walk_start_idx = (
             SPRITE_MARIO_R_WALK_START if facing_right else SPRITE_MARIO_L_WALK_START
@@ -225,7 +226,7 @@ class MarioSprite(BaseSprite):
             if self.x_velocity != 0
             else (SPRITE_MARIO_R_JUMP if facing_right else SPRITE_MARIO_L_JUMP)
             if self.is_jumping
-            else SPRITE_MARIO_R_STILL
+            else (SPRITE_MARIO_R_STILL if facing_right else SPRITE_MARIO_L_STILL)
         )
         self.y = int(self.y_float)
         super().tick(frame)

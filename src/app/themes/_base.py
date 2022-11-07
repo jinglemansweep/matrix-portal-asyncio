@@ -36,6 +36,8 @@ class BaseSprite(TileGrid):
         self.y_velocity = 0  # current sprite y velocity
         self.x_dest = None  # current destination x coord to move to on tick
         self.y_dest = None  # current destination y coord to move to on tick
+        self.x_dir_last = 0  # last movement x direction
+        self.y_dir_last = 0  # last movement y direction
 
     def move_to(self, x=None, y=None):
         # print(f"{self._name} move_to: x={x} y={y}")
@@ -61,12 +63,12 @@ class BaseSprite(TileGrid):
     def update_move_velocities(self):
         # print(f"self: {self}, x: {self.x}, x_dest: {self.x_dest}")
         if self.x_dest is not None and self.x_dest != self.x:
-            self.x_velocity = 1 if self.x_dest > self.x else -1
+            self.x_velocity = self.x_dir_last = 1 if self.x_dest > self.x else -1
         else:
             self.x_velocity = 0
             self.x_dest = None
         if self.y_dest is not None and self.y_dest != self.y:
-            self.y_velolicty = 1 if self.y_dest > self.y else -1
+            self.y_velolicty = self.y_dir_last = 1 if self.y_dest > self.y else -1
         else:
             self.y_velocity = 0
             self.y_dest = None
