@@ -60,16 +60,16 @@ class MarioTheme(BaseTheme):
         self.group_root.append(group_actors)
         # Labels
         group_labels = Group()
-        self.label_clock = ClockLabel(31, 3, font=self.font_bitocra)
+        self.label_clock = ClockLabel(33, 2, font=self.font_bitocra)
         group_labels.append(self.label_clock)
-        self.label_calendar = CalendarLabel(1, 3, font=self.font_bitocra)
+        self.label_calendar = CalendarLabel(0, 2, font=self.font_bitocra)
         group_labels.append(self.label_calendar)
         self.group_root.append(group_labels)
         # Render Display
         await self.update_background()
 
     async def loop(self, button=None):
-        if self.frame % 500 == 0:
+        if self.frame % 1000 == 0:
             if (self.sprite_mario.x <= -16 or self.sprite_mario.x >= 64) and (
                 self.sprite_goomba.x <= -16 or self.sprite_goomba.x >= 64
             ):
