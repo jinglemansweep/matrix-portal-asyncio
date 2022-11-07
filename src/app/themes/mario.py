@@ -1,3 +1,4 @@
+import math
 import random
 import time
 from adafruit_bitmap_font import bitmap_font
@@ -92,6 +93,7 @@ class MarioTheme(BaseTheme):
 
     def _build_random_background_group(self):
         now = RTC().datetime
+        # struct_time(tm_year=2022, tm_mon=11, tm_mday=7, tm_hour=20, tm_min=40, tm_sec=50, tm_wday=0, tm_yday=311, tm_isdst=-1)
         len_brick = random.randint(1, 3)
         group = Group()
         floor_brick = BrickSprite(
@@ -112,8 +114,23 @@ class MarioTheme(BaseTheme):
             underground=now.tm_hour >= 20 or now.tm_hour <= 6,
         )
         group.append(floor_rock)
+        week_num = math.floor(now.tm_yday / 7)
+        alt_week = week_num % 2 == 0
+        # Set pipe colour to blue (blue bin) or grey (black bin) collection reminder
+        # Between midday Thursday and midday Friday, collection is Friday morning usually
+        pipe_color = None
+        if (now.tm_wday == 3 and now.tm_hour > 12) or (
+            now.tm_wday == 4 and now.tm_hour < 12
+        ):
+            pipe_color = (
+                PipeSprite.PALETTE_BLUE if alt_week else PipeSprite.PALETTE_GREY
+            )
         pipe = PipeSprite(
-            bitmap=self.bitmap, palette=self.palette, x=random.randint(0, 48), y=8
+            bitmap=self.bitmap,
+            palette=self.palette,
+            x=random.randint(0, 48),
+            y=8,
+            color=pipe_color,
         )
         group.append(pipe)
         return group
@@ -285,8 +302,12 @@ class RockSprite(BaseSprite):
 
 class PipeSprite(BaseSprite):
     _name = "pipe"
+    PALETTE_BLUE = {14: 0x000066, 15: 0x000011}
+    PALETTE_GREY = {14: 0x111111, 15: 0x080808}
 
-    def __init__(self, bitmap, palette, x, y, height=1):
+    def __init__(self, bitmap, palette, x, y, height=1, color=None):
+        if color is not None:
+            palette = copy_update_palette(palette, color)
         super().__init__(
             bitmap=bitmap,
             palette=palette,
