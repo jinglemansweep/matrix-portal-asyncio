@@ -268,7 +268,7 @@ class BrickSprite(BaseSprite):
         if underground:
             palette = copy_update_palette(
                 palette,
-                {7: 0x00033, 10: 0x006077, 11: 0x006066, 12: 0x000055, 13: 0x000044},
+                {7: 0x000033, 10: 0x0060, 11: 0x006066, 12: 0x000055, 13: 0x000044},
             )
         super().__init__(
             bitmap=bitmap,
@@ -288,7 +288,7 @@ class RockSprite(BaseSprite):
         if underground:
             palette = copy_update_palette(
                 palette,
-                {7: 0x00033, 10: 0x006077, 11: 0x006066, 12: 0x000055, 13: 0x000044},
+                {7: 0x000033, 10: 0x006077, 11: 0x006066, 12: 0x000055, 13: 0x000044},
             )
         super().__init__(
             bitmap=bitmap,
