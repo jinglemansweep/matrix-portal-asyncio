@@ -50,11 +50,11 @@ class MarioTheme(BaseTheme):
         # Actors
         group_actors = Group()
         self.sprite_goomba = GoombaSprite(
-            bitmap=self.bitmap, palette=self.palette, x=24, y=8
+            bitmap=self.bitmap, palette=self.palette, x=24, y=32
         )
         group_actors.append(self.sprite_goomba)
         self.sprite_mario = MarioSprite(
-            bitmap=self.bitmap, palette=self.palette, x=0, y=8
+            bitmap=self.bitmap, palette=self.palette, x=0, y=32
         )
         group_actors.append(self.sprite_mario)
         self.group_root.append(group_actors)
@@ -100,7 +100,7 @@ class MarioTheme(BaseTheme):
             bitmap=self.bitmap,
             palette=self.palette,
             x=0,
-            y=24,
+            y=48,
             width=len_brick,
             underground=now.tm_hour >= 16 or now.tm_hour <= 8,
         )
@@ -109,7 +109,7 @@ class MarioTheme(BaseTheme):
             bitmap=self.bitmap,
             palette=self.palette,
             x=len_brick * 16,
-            y=24,
+            y=48,
             width=4 - len_brick,
             underground=now.tm_hour >= 20 or now.tm_hour <= 6,
         )
@@ -129,7 +129,7 @@ class MarioTheme(BaseTheme):
             bitmap=self.bitmap,
             palette=self.palette,
             x=random.randint(0, 48),
-            y=8,
+            y=32,
             color=pipe_color,
         )
         group.append(pipe)
