@@ -1,26 +1,35 @@
 import asyncio
 import board
 import busio
+import gc
 import keypad
-
-from adafruit_matrixportal.matrix import Matrix
+import neopixel
+import supervisor
+from digitalio import DigitalInOut
 from adafruit_matrixportal.network import Network
+from adafruit_matrixportal.matrix import Matrix
 from adafruit_lis3dh import LIS3DH_I2C
 from rtc import RTC
+from secrets import secrets
 
+from app.mqtt import setup_mqtt_client, poll_mqtt
 from app.utils import matrix_rotation, parse_timestamp
 
-BIT_DEPTH = 6
+TZ_OFFSET = 0
 NTP_ENABLE = True
 NTP_INTERVAL = 60 * 60  # 1h
+BIT_DEPTH = 6
+COLOR_ORDER = "RGB"  # RBG for larger pitched panel
 ASYNCIO_LOOP_DELAY = 0.02  # secs
+
+# Hardware setup
 
 
 class Manager:
     def __init__(self, theme, debug=False):
         print(f"MANAGER::INIT theme={theme} debug={debug}")
         # RGB Matrix
-        self.matrix = Matrix(bit_depth=BIT_DEPTH)
+        self.matrix = Matrix(bit_depth=BIT_DEPTH, color_order=COLOR_ORDER)
         # Accelerometer
         self.accelerometer = LIS3DH_I2C(busio.I2C(board.SCL, board.SDA), address=0x19)
         _ = self.accelerometer.acceleration  # drain startup readings
@@ -28,11 +37,16 @@ class Manager:
         self.display = self.matrix.display
         self.display.rotation = matrix_rotation(self.accelerometer)
         # Networking
-        self.network = Network(status_neopixel=board.NEOPIXEL, debug=debug)
+        self.network = Network(status_neopixel=board.NEOPIXEL, debug=False)
+        self.network.connect()
+        # MQTT
+        self.mqtt_client = setup_mqtt_client(self.network)
         # Theme
         self.theme = theme(display=self.display)
         # GPIO Buttons
         self.last_pressed = None
+        # State
+        self.state = {"frame": 0}
 
     def run(self):
         print(f"MANAGER::RUN")
@@ -64,11 +78,17 @@ class Manager:
 
     async def loop(self):
         print(f"MANAGER::LOOP")
+        gc.collect()
         if NTP_ENABLE:
             asyncio.create_task(self.ntp_update())
         asyncio.create_task(self.check_gpio_buttons())
         await asyncio.create_task(self.theme.setup())
+        self.mqtt_client.subscribe("test/topic", 1)
         while True:
+            gc.collect()
+            frame = self.state["frame"]
             await asyncio.create_task(self.theme.loop(button=self.last_pressed))
+            await asyncio.create_task(poll_mqtt(self.mqtt_client))
             self.last_pressed = None
-            await asyncio.sleep(ASYNCIO_LOOP_DELAY)
+            # await asyncio.sleep(ASYNCIO_LOOP_DELAY)
+            self.state["frame"] = frame + 1

@@ -19,8 +19,8 @@ echo
 
 echo "Syncronising project source to destination device (${dest_dir})..."
 echo
-rsync -rv "${base_dir}/src/" "${dest_dir}/"
-touch "${dest_dir}/code.py" && sync && sleep 1
+rsync -av "${base_dir}/src/" "${dest_dir}/"
+sync
 echo
 
 echo "DONE"
