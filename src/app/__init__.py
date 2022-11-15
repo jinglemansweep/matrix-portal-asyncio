@@ -11,6 +11,7 @@ from secrets import secrets
 
 from app.mqtt import MQTTClient
 from app.utils import matrix_rotation, parse_timestamp
+from app.themes._common import splash_boot
 
 NTP_ENABLE = secrets.get("ntp_enable", True)
 NTP_INTERVAL = secrets.get("ntp_interval", 3600)
@@ -32,6 +33,7 @@ class Manager:
         # Display Buffer
         self.display = self.matrix.display
         self.display.rotation = matrix_rotation(self.accelerometer)
+        self.display.show(splash_boot)
         # Networking
         self.network = Network(status_neopixel=board.NEOPIXEL, debug=debug)
         self.network.connect()
