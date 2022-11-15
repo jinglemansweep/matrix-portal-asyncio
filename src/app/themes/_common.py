@@ -5,4 +5,10 @@ from displayio import Group
 font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
 
 splash_boot = Group()
-splash_boot.append(Label(x=30, y=10, text="HELLO", font=font_bitocra))
+splash_boot.append(
+    Label(x=5, y=5, text="jinglemansweep", font=font_bitocra, color=0x666666)
+)
+
+splash_boot.append(
+    Label(x=5, y=25, text="loading...", font=font_bitocra, color=0x666600)
+)
