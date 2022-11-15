@@ -12,10 +12,10 @@ from secrets import secrets
 from app.mqtt import MQTTClient
 from app.utils import matrix_rotation, parse_timestamp
 
-NTP_ENABLE = True
-NTP_INTERVAL = 60 * 60  # 1h
-BIT_DEPTH = 6
-COLOR_ORDER = "RGB"  # RBG for larger pitched panel
+NTP_ENABLE = secrets.get("ntp_enable", True)
+NTP_INTERVAL = secrets.get("ntp_interval", 3600)
+BIT_DEPTH = secrets.get("matrix_bit_depth", 6)
+COLOR_ORDER = secrets.get("matrix_color_order", "RGB")
 
 # Hardware setup
 
