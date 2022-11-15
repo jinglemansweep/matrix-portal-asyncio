@@ -3,31 +3,27 @@ import board
 import busio
 import gc
 import keypad
-import neopixel
-import supervisor
-from digitalio import DigitalInOut
 from adafruit_matrixportal.network import Network
 from adafruit_matrixportal.matrix import Matrix
 from adafruit_lis3dh import LIS3DH_I2C
 from rtc import RTC
 from secrets import secrets
 
-from app.mqtt import setup_mqtt_client, poll_mqtt
+from app.mqtt import MQTTClient
 from app.utils import matrix_rotation, parse_timestamp
 
-TZ_OFFSET = 0
 NTP_ENABLE = True
 NTP_INTERVAL = 60 * 60  # 1h
 BIT_DEPTH = 6
 COLOR_ORDER = "RGB"  # RBG for larger pitched panel
-ASYNCIO_LOOP_DELAY = 0.02  # secs
 
 # Hardware setup
 
 
 class Manager:
     def __init__(self, theme, debug=False):
-        print(f"MANAGER::INIT theme={theme} debug={debug}")
+        print(f"Manager > Init: Theme = {theme}, Debug = {debug}")
+        self.debug = debug
         # RGB Matrix
         self.matrix = Matrix(bit_depth=BIT_DEPTH, color_order=COLOR_ORDER)
         # Accelerometer
@@ -37,10 +33,10 @@ class Manager:
         self.display = self.matrix.display
         self.display.rotation = matrix_rotation(self.accelerometer)
         # Networking
-        self.network = Network(status_neopixel=board.NEOPIXEL, debug=False)
+        self.network = Network(status_neopixel=board.NEOPIXEL, debug=debug)
         self.network.connect()
         # MQTT
-        self.mqtt_client = setup_mqtt_client(self.network)
+        self.mqtt = MQTTClient(self.network._wifi.esp, secrets, debug=debug)
         # Theme
         self.theme = theme(display=self.display)
         # GPIO Buttons
@@ -49,17 +45,19 @@ class Manager:
         self.state = {"frame": 0}
 
     def run(self):
-        print(f"MANAGER::RUN")
+        print(f"Manager > Run")
         while True:
             try:
                 asyncio.run(self.loop())
             finally:
-                print(f"MANAGER::ERROR - asyncio crash, restarting")
+                print(f"Manager > Error: asyncio crash, restarting")
                 asyncio.new_event_loop()
 
     async def ntp_update(self):
         timestamp = self.network.get_local_time()
-        print(f"MANAGER::NTP - set: {timestamp}, retrying in {NTP_INTERVAL}s")
+        print(
+            f"Manager > NTP: Set RTC to '{timestamp}', trying again in {NTP_INTERVAL}s"
+        )
         timetuple = parse_timestamp(timestamp)
         RTC().datetime = timetuple
         await asyncio.sleep(NTP_INTERVAL)
@@ -77,18 +75,20 @@ class Manager:
                 await asyncio.sleep(0)
 
     async def loop(self):
-        print(f"MANAGER::LOOP")
+        print(f"Manager > Loop: Init")
         gc.collect()
         if NTP_ENABLE:
             asyncio.create_task(self.ntp_update())
         asyncio.create_task(self.check_gpio_buttons())
         await asyncio.create_task(self.theme.setup())
-        self.mqtt_client.subscribe("test/topic", 1)
+        self.mqtt.subscribe("test/topic", 1)
+        print(f"Manager > Loop: Start")
         while True:
             gc.collect()
             frame = self.state["frame"]
             await asyncio.create_task(self.theme.loop(button=self.last_pressed))
-            await asyncio.create_task(poll_mqtt(self.mqtt_client))
+            await asyncio.create_task(self.mqtt.poll())
             self.last_pressed = None
-            # await asyncio.sleep(ASYNCIO_LOOP_DELAY)
             self.state["frame"] = frame + 1
+            if self.debug:
+                print(f"Manager > Debug: Frame = {self.frame}")

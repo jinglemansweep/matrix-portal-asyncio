@@ -1,4 +1,4 @@
-print("BOOT: code.py")
+print("BOOT")
 
 import displayio
 
