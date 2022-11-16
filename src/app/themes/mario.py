@@ -30,17 +30,16 @@ BUTTON_DOWN = 1
 
 
 class MarioTheme(BaseTheme):
+    __theme_name__ = "mario"
 
     def __init__(self, display, bitmap, palette, font, debug=False):
-        super().__init__(display, bitmap, palette, font, debug)      
+        super().__init__(display, bitmap, palette, font, debug)
 
     async def setup(self):
         # Call base setup
         await super().setup()
-        # Primitives
-        self.group_root = Group()
         # Background
-        self.group_root.append(Group())  # empty placeholder group for now
+        self.group.append(Group())  # empty placeholder group for now
         # Actors
         group_actors = Group()
         self.sprite_goomba = GoombaSprite(
@@ -51,42 +50,37 @@ class MarioTheme(BaseTheme):
             bitmap=self.bitmap, palette=self.palette, x=0, y=8
         )
         group_actors.append(self.sprite_mario)
-        self.group_root.append(group_actors)
+        self.group.append(group_actors)
         # Labels
         group_labels = Group()
         self.label_clock = ClockLabel(33, 2, font=self.font)
         group_labels.append(self.label_clock)
         self.label_calendar = CalendarLabel(0, 2, font=self.font)
         group_labels.append(self.label_calendar)
-        self.group_root.append(group_labels)
+        self.group.append(group_labels)
         # Render Display
         await self.update_background()
         gc.collect()
 
-    async def loop(self):
-        if self.frame % 1000 == 0:
+    async def tick(self, frame):
+        if frame % 1000 == 0:
             if (self.sprite_mario.x <= -16 or self.sprite_mario.x >= 64) and (
                 self.sprite_goomba.x <= -16 or self.sprite_goomba.x >= 64
             ):
                 await self.update_background()
-        self.label_clock.tick(self.frame)
-        self.label_calendar.tick(self.frame)
-        self.sprite_mario.tick(self.frame)
-        self.sprite_goomba.tick(self.frame)
-        # Call base loop at end of function (to increment frame index etc)
-        await super().loop()
+        self.label_clock.tick(frame)
+        self.label_calendar.tick(frame)
+        self.sprite_mario.tick(frame)
+        self.sprite_goomba.tick(frame)
+        await super().tick(frame)
 
-    async def on_button(self, button):
-        if button == 0:          
-            await self.update_background()
-        elif button == 1:
-            pass
-        await super().on_button(button)
+    async def on_button(self):
+        await self.update_background()
+        await super().on_button()
 
     async def update_background(self):
-        self.group_root[0] = self._build_random_background_group()
+        self.group[0] = self._build_random_background_group()
         gc.collect()
-        self.display.show(self.group_root)
 
     def _build_random_background_group(self):
         now = RTC().datetime

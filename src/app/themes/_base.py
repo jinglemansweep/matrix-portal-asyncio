@@ -1,24 +1,39 @@
 import random
-from displayio import TileGrid
+from displayio import Group, TileGrid
 
 
 class BaseTheme:
+    __theme_name__ = None
+
     def __init__(self, display, bitmap, palette, font, debug=False):
         self.display = display
         self.bitmap = bitmap
         self.palette = palette
         self.font = font
         self.debug = debug
-        self.frame = 0
+        self.actors = {}
+        self.group = Group()
 
+    # Setup the theme groups, tilesets, sprites etc
     async def setup(self):
+        print("Theme > Setup: Name={}".format(self.__theme_name__))
+
+    # Teardown any resources (if neccesary) when switching themes
+    async def teardown(self):
+        print("Theme > Teardown: Name={}".format(self.__theme_name__))
+
+    # Render top-level theme displayio group
+    async def render_group(self):
+        return self.group
+
+    # Run every frame so theme can animate itself and perform other actions
+    async def tick(self, frame):
         pass
+        # print("Theme > Tick: Frame={}".format(frame))
 
-    async def loop(self):
-        self.frame += 1
-
-    async def on_button(self, button):
-        print('Button > Press: {}'.format(button))
+    # Handle hardware button presses from manager
+    async def on_button(self):
+        print("Theme > Button Pressed")
 
 
 class BaseSprite(TileGrid):

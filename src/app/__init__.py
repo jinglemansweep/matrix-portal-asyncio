@@ -15,9 +15,19 @@ from app.utils import matrix_rotation, parse_timestamp, load_sprites_brightness_
 
 from app.themes._common import build_splash_group
 
+# Constants
+
+BUTTON_UP = 0
+BUTTON_DOWN = 1
+
+BUTTON_THEME_CHANGE = BUTTON_DOWN
+BUTTON_THEME_ACTION = BUTTON_UP
+
 # Static Resources
 
-sprites_bitmap, sprites_palette = load_sprites_brightness_adjusted("/sprites.bmp", transparent_index=31)
+sprites_bitmap, sprites_palette = load_sprites_brightness_adjusted(
+    "/sprites.bmp", transparent_index=31
+)
 font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
 
 DEBUG = secrets.get("debug", False)
@@ -31,8 +41,8 @@ COLOR_ORDER = secrets.get("matrix_color_order", "RGB")
 
 
 class Manager:
-    def __init__(self, theme, debug=DEBUG):
-        print(f"Manager > Init: Theme={theme}")
+    def __init__(self, themes=None, debug=DEBUG):
+        print(f"Manager > Init: Themes={themes}")
         self.debug = debug
         # RGB Matrix
         self.matrix = Matrix(bit_depth=BIT_DEPTH, color_order=COLOR_ORDER)
@@ -51,10 +61,10 @@ class Manager:
         self.mqtt = MQTTClient(self.network._wifi.esp, secrets, debug=self.debug)
         gc.collect()
         # Theme
-        self.theme = theme(display=self.display, bitmap=sprites_bitmap, palette=sprites_palette, font=font_bitocra, debug=self.debug)
+        self.themes = self.install_themes(themes)
         gc.collect()
         # State
-        self.state = {"frame": 0, "button": None}
+        self.state = {"frame": 0, "theme": 0, "button": None}
 
     def run(self):
         print(f"Manager > Run")
@@ -65,7 +75,49 @@ class Manager:
                 print(f"Manager > Error: asyncio crash, restarting")
                 asyncio.new_event_loop()
 
-    async def ntp_update(self):
+    async def loop(self):
+        print(f"Manager > Loop Init")
+        gc.collect()
+        if NTP_ENABLE:
+            asyncio.create_task(self._ntp_update())
+        asyncio.create_task(self._check_gpio_buttons())
+        asyncio.create_task(self.mqtt.poll())
+        await asyncio.create_task(self.setup_themes())
+        self.mqtt.subscribe("test/topic", 1)
+        print(
+            "Manager > Loop Start: Theme={} Mem={}".format(
+                self.get_theme(), gc.mem_free()
+            )
+        )
+        while True:
+            await self.tick()
+            await asyncio.sleep(0.00001)
+
+    async def tick(self):
+        theme_idx = self.state["theme"]
+        frame = self.state["frame"]
+        button = self.state["button"]
+        theme = self.get_theme()
+        await theme.tick(frame)
+        group = await theme.render_group()
+        self.display.show(group)
+        if button is not None:
+            if button == BUTTON_THEME_ACTION:
+                await asyncio.create_task(theme.on_button())
+            elif button == BUTTON_THEME_CHANGE:
+                self.set_next_theme()
+            self.state["button"] = None
+        self.state["frame"] = frame + 1
+        if frame % 100 == 0:
+            gc.collect()
+            if self.debug:
+                print(
+                    "Manager > Debug: Mem={} | Theme={} [{}] | Frame={}".format(
+                        gc.mem_free(), theme.__theme_name__, theme_idx, frame
+                    )
+                )
+
+    async def _ntp_update(self):
         timestamp = self.network.get_local_time()
         print(
             f"Manager > NTP: Set RTC to '{timestamp}', trying again in {NTP_INTERVAL}s"
@@ -75,40 +127,42 @@ class Manager:
         await asyncio.sleep(NTP_INTERVAL)
         asyncio.create_task(self.ntp_update())
 
-    async def check_gpio_buttons(self):
+    async def _check_gpio_buttons(self):
         with Keys(
             (board.BUTTON_UP, board.BUTTON_DOWN), value_when_pressed=False, pull=True
         ) as keys:
             while True:
-                key_event = keys.events.get()                
+                key_event = keys.events.get()
                 if key_event and key_event.pressed:
                     key_number = key_event.key_number
                     self.state["button"] = key_number
-                await asyncio.sleep(0)
+                await asyncio.sleep(0.001)
 
-    async def loop(self):
-        print(f"Manager > Loop Init")
-        gc.collect()
-        if NTP_ENABLE:
-            asyncio.create_task(self.ntp_update())
-        asyncio.create_task(self.check_gpio_buttons())
-        asyncio.create_task(self.mqtt.poll())
-        await asyncio.create_task(self.theme.setup())
-        self.mqtt.subscribe("test/topic", 1)
-        print("Manager > Loop Start: Mem={}".format(gc.mem_free()))
-        while True:
-            frame = self.state["frame"]
-            button = self.state["button"]
-            await asyncio.create_task(self.theme.loop())
-            if button is not None:
-                await asyncio.create_task(self.theme.on_button(button))
-                self.state["button"] = None
-            self.state["frame"] = frame + 1
-            if frame % 100 == 0:
-                gc.collect()
-                if self.debug:
-                    print(
-                        "Manager > Debug: Mem={} | Frame={}".format(
-                            gc.mem_free(), self.state["frame"]
-                        )
-                    )
+    def install_themes(self, theme_classes):
+        themes = []
+        assert len(theme_classes) > 0
+        for ThemeCls in theme_classes:
+            theme = ThemeCls(
+                display=self.display,
+                bitmap=sprites_bitmap,
+                palette=sprites_palette,
+                font=font_bitocra,
+                debug=self.debug,
+            )
+            themes.append(theme)
+        return themes
+
+    async def setup_themes(self):
+        for theme in self.themes:
+            await theme.setup()
+
+    def get_theme(self):
+        return self.themes[self.state["theme"]]
+
+    def set_next_theme(self):
+        count = len(self.themes)
+        idx = self.state["theme"]
+        idx += 1
+        if idx + 1 > count:
+            idx = 0
+        self.state["theme"] = idx
