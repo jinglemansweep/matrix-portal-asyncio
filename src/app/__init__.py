@@ -3,16 +3,18 @@ import board
 from busio import I2C
 import gc
 from keypad import Keys
+import adafruit_esp32spi.adafruit_esp32spi_socket as socket
+import adafruit_minimqtt.adafruit_minimqtt as MQTT
 from adafruit_matrixportal.network import Network
 from adafruit_matrixportal.matrix import Matrix
 from adafruit_bitmap_font import bitmap_font
 from adafruit_lis3dh import LIS3DH_I2C
+from displayio import Group
 from rtc import RTC
 from secrets import secrets
 
-from app.mqtt import MQTTClient
-from app.utils import matrix_rotation, parse_timestamp, load_sprites_brightness_adjusted
 
+from app.utils import matrix_rotation, parse_timestamp, load_sprites_brightness_adjusted
 from app.themes._common import build_splash_group
 
 # Constants
@@ -35,6 +37,7 @@ NTP_ENABLE = secrets.get("ntp_enable", True)
 NTP_INTERVAL = secrets.get("ntp_interval", 3600)
 BIT_DEPTH = secrets.get("matrix_bit_depth", 6)
 COLOR_ORDER = secrets.get("matrix_color_order", "RGB")
+MQTT_PREFIX = secrets.get("mqtt_prefix", "matrixportal")
 
 
 # Manager Logic
@@ -58,17 +61,38 @@ class Manager:
         self.group_splash[1].text = "wifi"
         self.network = Network(status_neopixel=board.NEOPIXEL, debug=self.debug)
         self.network.connect()
+        mac = self.network._wifi.esp.MAC_address
+        self.device_id = "{:02x}{:02x}{:02x}{:02x}".format(
+            mac[0], mac[1], mac[2], mac[3]
+        )
         gc.collect()
         # MQTT
+        MQTT.set_socket(socket, self.network._wifi.esp)  # network._wifi.esp
         self.group_splash[1].text = "mqtt"
-        self.mqtt = MQTTClient(self.network._wifi.esp, secrets, debug=self.debug)
+        self.mqtt = MQTT.MQTT(
+            broker=secrets.get("mqtt_broker"),
+            username=secrets.get("mqtt_user"),
+            password=secrets.get("mqtt_password"),
+            port=secrets.get("mqtt_port", 1883),
+        )
+        self.mqtt.on_connect = self._on_mqtt_connect
+        self.mqtt.on_disconnect = self._on_mqtt_disconnect
+        self.mqtt.on_message = self._on_mqtt_message
+        self.mqtt.connect()
         gc.collect()
         # Theme
         self.group_splash[1].text = "themes"
-        self.themes = self.install_themes(themes)
+        self.themes = self._install_themes(themes)
         gc.collect()
         # State
-        self.state = {"frame": 0, "theme": 0, "button": None}
+        self.state = {
+            "frame": 0,
+            "theme": 0,
+            "button": None,
+            "blank": False,
+            "time_visible": True,
+            "date_visible": True,
+        }
 
     def run(self):
         print(f"Manager > Run")
@@ -86,13 +110,13 @@ class Manager:
             self.group_splash[1].text = "ntp"
             asyncio.create_task(self._ntp_update())
         asyncio.create_task(self._check_gpio_buttons())
-        asyncio.create_task(self.mqtt.poll())
+        asyncio.create_task(self._mqtt_poll())
         self.group_splash[1].text = "almost done"
-        await asyncio.create_task(self.setup_themes())
-        self.mqtt.subscribe("test/topic", 1)
+        await asyncio.create_task(self._setup_themes())
+        self.mqtt.subscribe(f"matrixportal/{self.device_id}/#", 1)
         print(
-            "Manager > Loop Start: Theme={} Mem={}".format(
-                self.get_theme(), gc.mem_free()
+            "Manager > Loop Start: Device={} | Theme={} | Mem={}".format(
+                self.device_id, self.get_theme(), gc.mem_free()
             )
         )
         while True:
@@ -103,10 +127,11 @@ class Manager:
         theme_idx = self.state["theme"]
         frame = self.state["frame"]
         button = self.state["button"]
+        blank = self.state["blank"]
         theme = self.get_theme()
         await theme.tick(self.state)
         group = await theme.render_group()
-        self.display.show(group)
+        self.display.show(group if not blank else Group())
         if button is not None:
             if button == BUTTON_THEME_ACTION:
                 await asyncio.create_task(theme.on_button())
@@ -123,7 +148,19 @@ class Manager:
                     )
                 )
 
+    def get_theme(self):
+        return self.themes[self.state["theme"]]
+
+    def set_next_theme(self):
+        count = len(self.themes)
+        idx = self.state["theme"]
+        idx += 1
+        if idx + 1 > count:
+            idx = 0
+        self.state["theme"] = idx
+
     async def _ntp_update(self):
+        self.group_splash[1].text = "ntp"
         timestamp = self.network.get_local_time()
         print(
             f"Manager > NTP: Set RTC to '{timestamp}', trying again in {NTP_INTERVAL}s"
@@ -144,7 +181,29 @@ class Manager:
                     self.state["button"] = key_number
                 await asyncio.sleep(0.001)
 
-    def install_themes(self, theme_classes):
+    async def _mqtt_poll(self, timeout=0.000001):
+        while True:
+            self.mqtt.loop(timeout=timeout)
+            await asyncio.sleep(timeout)
+
+    def _on_mqtt_message(self, client, topic, message):
+        print(f"MQTT > Message: Topic={topic} | Message={message}")
+        if topic == f"{MQTT_PREFIX}/{self.device_id}/visible":
+            self.state["blank"] = not self.state["blank"]
+        if topic == f"{MQTT_PREFIX}/{self.device_id}/date/visible":
+            self.state["date_visible"] = not self.state["date_visible"]
+        if topic == f"{MQTT_PREFIX}/{self.device_id}/time/visible":
+            self.state["time_visible"] = not self.state["time_visible"]
+        if topic == f"{MQTT_PREFIX}/{self.device_id}/theme/next":
+            self.set_next_theme()
+
+    def _on_mqtt_connect(self, client, userdata, flags, rc):
+        print("MQTT > Connected: Flags={} | RC={}".format(flags, rc))
+
+    def _on_mqtt_disconnect(self, client, userdata, rc):
+        print("MQTT > Disconnected")
+
+    def _install_themes(self, theme_classes):
         themes = []
         assert len(theme_classes) > 0
         for ThemeCls in theme_classes:
@@ -158,18 +217,7 @@ class Manager:
             themes.append(theme)
         return themes
 
-    async def setup_themes(self):
+    async def _setup_themes(self):
         for theme in self.themes:
             await theme.setup()
             gc.collect()
-
-    def get_theme(self):
-        return self.themes[self.state["theme"]]
-
-    def set_next_theme(self):
-        count = len(self.themes)
-        idx = self.state["theme"]
-        idx += 1
-        if idx + 1 > count:
-            idx = 0
-        self.state["theme"] = idx

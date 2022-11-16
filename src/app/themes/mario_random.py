@@ -75,11 +75,11 @@ class MarioRandomTheme(BaseTheme):
                 self.sprite_goomba.x <= -16 or self.sprite_goomba.x >= 64
             ):
                 await self.update_background()
-        self.label_clock.tick(frame)
-        self.label_calendar.tick(frame)
-        self.sprite_mario.tick(frame)
-        self.sprite_goomba.tick(frame)
-        await super().tick(frame)
+        self.label_clock.tick(state)
+        self.label_calendar.tick(state)
+        self.sprite_mario.tick(state)
+        self.sprite_goomba.tick(state)
+        await super().tick(state)
 
     async def on_button(self):
         await self.update_background()

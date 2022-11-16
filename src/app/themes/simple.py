@@ -46,10 +46,9 @@ class SimpleTheme(BaseTheme):
         gc.collect()
 
     async def tick(self, state):
-        frame = state["frame"]
-        self.label_clock.tick(frame)
-        self.label_calendar.tick(frame)
-        await super().tick(frame)
+        self.label_calendar.tick(state)
+        self.label_clock.tick(state)
+        await super().tick(state)
 
     async def on_button(self):
         await super().on_button()

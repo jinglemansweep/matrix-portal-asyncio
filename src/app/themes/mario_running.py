@@ -75,10 +75,9 @@ class MarioRunningTheme(BaseTheme):
         gc.collect()
 
     async def tick(self, state):
-        frame = state["frame"]
-        self.label_clock.tick(frame)
-        self.label_calendar.tick(frame)
-        self.sprite_mario.tick(frame)
+        self.label_clock.tick(state)
+        self.label_calendar.tick(state)
+        self.sprite_mario.tick(state)
         if self.sprite_floor.x <= -64:
             self.sprite_floor.x = 64
         else:
@@ -87,7 +86,7 @@ class MarioRunningTheme(BaseTheme):
             self.sprite_floor_alt.x = 64
         else:
             self.sprite_floor_alt.x -= 1
-        await super().tick(frame)
+        await super().tick(state)
 
     async def on_button(self):
         await super().on_button()
@@ -114,7 +113,8 @@ class MarioRunningSprite(BaseSprite):
             self.is_jumping = True
             self.y_float -= 10
 
-    def tick(self, frame):
+    def tick(self, state):
+        frame = state["frame"]
         if frame % 800 == 0:
             self.jump()
         if self.is_jumping:
