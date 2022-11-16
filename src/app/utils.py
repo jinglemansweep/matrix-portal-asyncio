@@ -1,7 +1,7 @@
+import gc
 import math
 import time
-import adafruit_imageload
-from displayio import Palette
+from displayio import Palette, OnDiskBitmap
 from cedargrove_palettefader.palettefader import PaletteFader
 
 PALETTE_GAMMA = 1.0
@@ -29,6 +29,7 @@ def matrix_rotation(accelerometer):
 
 
 def copy_update_palette(palette, updates=None):
+    return palette
     if updates is None:
         updates = dict()
     palette_clone = Palette(len(palette))
@@ -49,7 +50,9 @@ def load_sprites_brightness_adjusted(
     normalize=PALETTE_NORMALIZE,
     transparent_index=None,
 ):
-    bitmap, palette = adafruit_imageload.load(filename)
+    gc.collect()
+    bitmap = OnDiskBitmap(filename)
+    palette = bitmap.pixel_shader
     if transparent_index is not None:
         palette.make_transparent(transparent_index)
     palette_adj = PaletteFader(
