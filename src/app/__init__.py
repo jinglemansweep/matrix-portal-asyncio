@@ -15,6 +15,7 @@ from secrets import secrets
 
 
 from app.utils import matrix_rotation, parse_timestamp, load_sprites_brightness_adjusted
+from app.hass import advertise_hass_entity, build_topic_prefix, HASS_ENTITY_ID_PREFIX
 from app.themes._common import build_splash_group
 
 # Constants
@@ -69,16 +70,7 @@ class Manager:
         # MQTT
         MQTT.set_socket(socket, self.network._wifi.esp)  # network._wifi.esp
         self.group_splash[1].text = "mqtt"
-        self.mqtt = MQTT.MQTT(
-            broker=secrets.get("mqtt_broker"),
-            username=secrets.get("mqtt_user"),
-            password=secrets.get("mqtt_password"),
-            port=secrets.get("mqtt_port", 1883),
-        )
-        self.mqtt.on_connect = self._on_mqtt_connect
-        self.mqtt.on_disconnect = self._on_mqtt_disconnect
-        self.mqtt.on_message = self._on_mqtt_message
-        self.mqtt.connect()
+        self._setup_mqtt_client()
         gc.collect()
         # Theme
         self.group_splash[1].text = "themes"
@@ -181,6 +173,39 @@ class Manager:
                     self.state["button"] = key_number
                 await asyncio.sleep(0.001)
 
+    def _setup_mqtt_client(self):
+        self.mqtt = MQTT.MQTT(
+            broker=secrets.get("mqtt_broker"),
+            username=secrets.get("mqtt_user"),
+            password=secrets.get("mqtt_password"),
+            port=secrets.get("mqtt_port", 1883),
+        )
+        self.mqtt.on_connect = self._on_mqtt_connect
+        self.mqtt.on_disconnect = self._on_mqtt_disconnect
+        self.mqtt.on_message = self._on_mqtt_message
+        self.mqtt.connect()
+        advertise_hass_entity(
+            self.mqtt,
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_visible",
+            "switch",
+        )
+        advertise_hass_entity(
+            self.mqtt,
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_date_visible",
+            "switch",
+        )
+        advertise_hass_entity(
+            self.mqtt,
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_time_visible",
+            "switch",
+        )
+        advertise_hass_entity(
+            self.mqtt,
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_theme_next",
+            "switch",
+        )
+        gc.collect()
+
     async def _mqtt_poll(self, timeout=0.000001):
         while True:
             self.mqtt.loop(timeout=timeout)
@@ -188,13 +213,30 @@ class Manager:
 
     def _on_mqtt_message(self, client, topic, message):
         print(f"MQTT > Message: Topic={topic} | Message={message}")
-        if topic == f"{MQTT_PREFIX}/{self.device_id}/visible":
-            self.state["blank"] = not self.state["blank"]
-        if topic == f"{MQTT_PREFIX}/{self.device_id}/date/visible":
-            self.state["date_visible"] = not self.state["date_visible"]
-        if topic == f"{MQTT_PREFIX}/{self.device_id}/time/visible":
-            self.state["time_visible"] = not self.state["time_visible"]
-        if topic == f"{MQTT_PREFIX}/{self.device_id}/theme/next":
+
+        prefix_visible = build_topic_prefix(
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_visible", "switch"
+        )
+        if topic == f"{prefix_visible}/set":
+            on = "on" in message.lower()
+            self.state["blank"] = not on
+
+        prefix_date_visible = build_topic_prefix(
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_date_visible", "switch"
+        )
+        if topic == f"{prefix_date_visible}/set":
+            self.state["date_visible"] = "on" in message.lower()
+
+        prefix_time_visible = build_topic_prefix(
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_time_visible", "switch"
+        )
+        if topic == f"{prefix_time_visible}/set":
+            self.state["time_visible"] = "on" in message.lower()
+
+        prefix_theme_next = build_topic_prefix(
+            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_theme_next", "switch"
+        )
+        if topic == f"{prefix_theme_next}/set":
             self.set_next_theme()
 
     def _on_mqtt_connect(self, client, userdata, flags, rc):
