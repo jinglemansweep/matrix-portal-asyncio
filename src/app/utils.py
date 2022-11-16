@@ -29,7 +29,6 @@ def matrix_rotation(accelerometer):
 
 
 def copy_update_palette(palette, updates=None):
-    return palette
     if updates is None:
         updates = dict()
     palette_clone = Palette(len(palette))

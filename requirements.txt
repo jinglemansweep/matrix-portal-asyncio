@@ -5,6 +5,6 @@ adafruit_bitmap_font==1.5.11
 adafruit_display_text==2.22.12
 adafruit_io==5.6.12
 adafruit_matrixportal==3.0.10
-adafruit_minimqtt==5.0.2
+adafruit_minimqtt==6.0.1
 asyncio==0.5.17
 cedargrove_palettefader==1.1.0
