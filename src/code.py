@@ -9,10 +9,11 @@ import displayio
 displayio.release_displays()
 
 from app import Manager
-from app.themes.gradius import GradiusTheme
-from app.themes.mario import MarioTheme
+from app.themes.mario_random import MarioRandomTheme
+from app.themes.mario_running import MarioRunningTheme
+from app.themes.simple import SimpleTheme
 
-manager = Manager(themes=[MarioTheme, GradiusTheme])
+manager = Manager(themes=[MarioRandomTheme, MarioRunningTheme, SimpleTheme])
 gc.collect()
 
 manager.run()

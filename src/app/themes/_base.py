@@ -27,9 +27,9 @@ class BaseTheme:
         return self.group
 
     # Run every frame so theme can animate itself and perform other actions
-    async def tick(self, frame):
+    async def tick(self, state):
         pass
-        # print("Theme > Tick: Frame={}".format(frame))
+        # print("Theme > Tick: Frame={}".format(state["frame"]))
 
     # Handle hardware button presses from manager
     async def on_button(self):

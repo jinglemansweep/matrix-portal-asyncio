@@ -97,14 +97,14 @@ class Manager:
         )
         while True:
             await self.tick()
-            await asyncio.sleep(0.00001)
+            await asyncio.sleep(0.0001)
 
     async def tick(self):
         theme_idx = self.state["theme"]
         frame = self.state["frame"]
         button = self.state["button"]
         theme = self.get_theme()
-        await theme.tick(frame)
+        await theme.tick(self.state)
         group = await theme.render_group()
         self.display.show(group)
         if button is not None:
@@ -161,6 +161,7 @@ class Manager:
     async def setup_themes(self):
         for theme in self.themes:
             await theme.setup()
+            gc.collect()
 
     def get_theme(self):
         return self.themes[self.state["theme"]]
