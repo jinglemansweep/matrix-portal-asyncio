@@ -52,15 +52,19 @@ class Manager:
         # Display Buffer
         self.display = self.matrix.display
         self.display.rotation = matrix_rotation(self.accelerometer)
-        self.display.show(build_splash_group(font=font_bitocra))
+        self.group_splash = build_splash_group(font=font_bitocra)
+        self.display.show(self.group_splash)
         # Networking
+        self.group_splash[1].text = "wifi"
         self.network = Network(status_neopixel=board.NEOPIXEL, debug=self.debug)
         self.network.connect()
         gc.collect()
         # MQTT
+        self.group_splash[1].text = "mqtt"
         self.mqtt = MQTTClient(self.network._wifi.esp, secrets, debug=self.debug)
         gc.collect()
         # Theme
+        self.group_splash[1].text = "themes"
         self.themes = self.install_themes(themes)
         gc.collect()
         # State
@@ -79,9 +83,11 @@ class Manager:
         print(f"Manager > Loop Init")
         gc.collect()
         if NTP_ENABLE:
+            self.group_splash[1].text = "ntp"
             asyncio.create_task(self._ntp_update())
         asyncio.create_task(self._check_gpio_buttons())
         asyncio.create_task(self.mqtt.poll())
+        self.group_splash[1].text = "almost done"
         await asyncio.create_task(self.setup_themes())
         self.mqtt.subscribe("test/topic", 1)
         print(
