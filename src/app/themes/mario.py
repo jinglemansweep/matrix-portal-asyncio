@@ -1,7 +1,7 @@
 import math
 import random
 import time
-from adafruit_bitmap_font import bitmap_font
+
 from adafruit_display_text.label import Label
 from displayio import Group
 from rtc import RTC
@@ -31,14 +31,12 @@ BUTTON_DOWN = 1
 class MarioTheme(BaseTheme):
     spritesheet_file = "/app/themes/mario.bmp"
 
-    def __init__(self, display):
-        super().__init__(display)
+    def __init__(self, display, font, debug=False):
+        super().__init__(display, font, debug)
         # Display & Resources
-        self.display = display
         self.bitmap, self.palette = load_sprites_brightness_adjusted(
             self.spritesheet_file, transparent_index=31
         )
-        self.font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
 
     async def setup(self):
         # Call base setup
@@ -60,9 +58,9 @@ class MarioTheme(BaseTheme):
         self.group_root.append(group_actors)
         # Labels
         group_labels = Group()
-        self.label_clock = ClockLabel(33, 2, font=self.font_bitocra)
+        self.label_clock = ClockLabel(33, 2, font=self.font)
         group_labels.append(self.label_clock)
-        self.label_calendar = CalendarLabel(0, 2, font=self.font_bitocra)
+        self.label_calendar = CalendarLabel(0, 2, font=self.font)
         group_labels.append(self.label_calendar)
         self.group_root.append(group_labels)
         # Render Display

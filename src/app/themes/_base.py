@@ -3,8 +3,10 @@ from displayio import TileGrid
 
 
 class BaseTheme:
-    def __init__(self, display):
+    def __init__(self, display, font, debug=False):
         self.display = display
+        self.font = font
+        self.debug = debug
         self.frame = 0
 
     async def setup(self):
