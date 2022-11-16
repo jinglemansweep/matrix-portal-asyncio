@@ -1,4 +1,5 @@
-import math
+import gc
+from math import floor
 import random
 import time
 
@@ -7,7 +8,7 @@ from displayio import Group
 from rtc import RTC
 
 from app.themes._base import BaseSprite, BaseTheme
-from app.utils import load_sprites_brightness_adjusted, copy_update_palette
+from app.utils import copy_update_palette
 
 GRAVITY = 0.75
 
@@ -29,14 +30,9 @@ BUTTON_DOWN = 1
 
 
 class MarioTheme(BaseTheme):
-    spritesheet_file = "/app/themes/mario.bmp"
 
-    def __init__(self, display, font, debug=False):
-        super().__init__(display, font, debug)
-        # Display & Resources
-        self.bitmap, self.palette = load_sprites_brightness_adjusted(
-            self.spritesheet_file, transparent_index=31
-        )
+    def __init__(self, display, bitmap, palette, font, debug=False):
+        super().__init__(display, bitmap, palette, font, debug)      
 
     async def setup(self):
         # Call base setup
@@ -65,6 +61,7 @@ class MarioTheme(BaseTheme):
         self.group_root.append(group_labels)
         # Render Display
         await self.update_background()
+        gc.collect()
 
     async def loop(self, button=None):
         if self.frame % 1000 == 0:
@@ -112,7 +109,7 @@ class MarioTheme(BaseTheme):
             underground=now.tm_hour >= 20 or now.tm_hour <= 6,
         )
         group.append(floor_rock)
-        week_num = math.floor(now.tm_yday / 7)
+        week_num = floor(now.tm_yday / 7)
         alt_week = week_num % 2 == 0
         # Set pipe colour to blue (blue bin) or grey (black bin) collection reminder
         # Between midday Thursday and midday Friday, collection is Friday morning usually

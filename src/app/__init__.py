@@ -1,8 +1,8 @@
 import asyncio
 import board
-import busio
+from busio import I2C
 import gc
-import keypad
+from keypad import Keys
 from adafruit_matrixportal.network import Network
 from adafruit_matrixportal.matrix import Matrix
 from adafruit_bitmap_font import bitmap_font
@@ -11,9 +11,13 @@ from rtc import RTC
 from secrets import secrets
 
 from app.mqtt import MQTTClient
-from app.utils import matrix_rotation, parse_timestamp
+from app.utils import matrix_rotation, parse_timestamp, load_sprites_brightness_adjusted
+
 from app.themes._common import build_splash_group
 
+# Static Resources
+
+sprites_bitmap, sprites_palette = load_sprites_brightness_adjusted("/sprites.bmp", transparent_index=31)
 font_bitocra = bitmap_font.load_font("/bitocra7.bdf")
 
 DEBUG = secrets.get("debug", False)
@@ -22,7 +26,8 @@ NTP_INTERVAL = secrets.get("ntp_interval", 3600)
 BIT_DEPTH = secrets.get("matrix_bit_depth", 6)
 COLOR_ORDER = secrets.get("matrix_color_order", "RGB")
 
-# Hardware setup
+
+# Manager Logic
 
 
 class Manager:
@@ -32,7 +37,7 @@ class Manager:
         # RGB Matrix
         self.matrix = Matrix(bit_depth=BIT_DEPTH, color_order=COLOR_ORDER)
         # Accelerometer
-        self.accelerometer = LIS3DH_I2C(busio.I2C(board.SCL, board.SDA), address=0x19)
+        self.accelerometer = LIS3DH_I2C(I2C(board.SCL, board.SDA), address=0x19)
         _ = self.accelerometer.acceleration  # drain startup readings
         # Display Buffer
         self.display = self.matrix.display
@@ -46,7 +51,7 @@ class Manager:
         self.mqtt = MQTTClient(self.network._wifi.esp, secrets, debug=self.debug)
         gc.collect()
         # Theme
-        self.theme = theme(display=self.display, font=font_bitocra, debug=self.debug)
+        self.theme = theme(display=self.display, bitmap=sprites_bitmap, palette=sprites_palette, font=font_bitocra, debug=self.debug)
         gc.collect()
         # GPIO Buttons
         self.last_pressed = None
@@ -73,7 +78,7 @@ class Manager:
         asyncio.create_task(self.ntp_update())
 
     async def check_gpio_buttons(self):
-        with keypad.Keys(
+        with Keys(
             (board.BUTTON_UP, board.BUTTON_DOWN), value_when_pressed=False, pull=True
         ) as keys:
             while True:
@@ -101,7 +106,7 @@ class Manager:
             self.state["frame"] = frame + 1
             if self.debug:
                 print(
-                    "Manager > Debug: RAM: {} | Frame: {}".format(
+                    "Manager > Debug: Mem={} | Frame={}".format(
                         gc.mem_free(), self.state["frame"]
                     )
                 )
