@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import adafruit_minimqtt.adafruit_minimqtt as MQTT
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
@@ -18,7 +19,9 @@ class MQTTClient:
         gc.collect()
 
     async def poll(self, timeout=0.0001):
-        self._client.loop(timeout=timeout)
+        while True:
+            self._client.loop(timeout=timeout)
+            await asyncio.sleep(timeout*2)
 
     def connect(self):
         self._client.connect()

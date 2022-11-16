@@ -63,27 +63,29 @@ class MarioTheme(BaseTheme):
         await self.update_background()
         gc.collect()
 
-    async def loop(self, button=None):
+    async def loop(self):
         if self.frame % 1000 == 0:
             if (self.sprite_mario.x <= -16 or self.sprite_mario.x >= 64) and (
                 self.sprite_goomba.x <= -16 or self.sprite_goomba.x >= 64
             ):
-                print(
-                    f"THEME::LOOP - mario (x: {self.sprite_mario.x}) and goomba (x: {self.sprite_goomba.x}) off screen, regenerating background"
-                )
                 await self.update_background()
-        if button is not None:
-            print(f"THEME::BUTTON - button:{button}")
-            await self.update_background()
         self.label_clock.tick(self.frame)
         self.label_calendar.tick(self.frame)
         self.sprite_mario.tick(self.frame)
         self.sprite_goomba.tick(self.frame)
         # Call base loop at end of function (to increment frame index etc)
-        await super().loop(button)
+        await super().loop()
+
+    async def on_button(self, button):
+        if button == 0:          
+            await self.update_background()
+        elif button == 1:
+            pass
+        await super().on_button(button)
 
     async def update_background(self):
         self.group_root[0] = self._build_random_background_group()
+        gc.collect()
         self.display.show(self.group_root)
 
     def _build_random_background_group(self):

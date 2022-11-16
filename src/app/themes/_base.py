@@ -14,8 +14,11 @@ class BaseTheme:
     async def setup(self):
         pass
 
-    async def loop(self, button=None):
+    async def loop(self):
         self.frame += 1
+
+    async def on_button(self, button):
+        print('Button > Press: {}'.format(button))
 
 
 class BaseSprite(TileGrid):

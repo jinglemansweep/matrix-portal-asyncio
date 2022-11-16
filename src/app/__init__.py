@@ -32,7 +32,7 @@ COLOR_ORDER = secrets.get("matrix_color_order", "RGB")
 
 class Manager:
     def __init__(self, theme, debug=DEBUG):
-        print(f"Manager > Init: Theme = {theme}")
+        print(f"Manager > Init: Theme={theme}")
         self.debug = debug
         # RGB Matrix
         self.matrix = Matrix(bit_depth=BIT_DEPTH, color_order=COLOR_ORDER)
@@ -53,10 +53,8 @@ class Manager:
         # Theme
         self.theme = theme(display=self.display, bitmap=sprites_bitmap, palette=sprites_palette, font=font_bitocra, debug=self.debug)
         gc.collect()
-        # GPIO Buttons
-        self.last_pressed = None
         # State
-        self.state = {"frame": 0}
+        self.state = {"frame": 0, "button": None}
 
     def run(self):
         print(f"Manager > Run")
@@ -82,31 +80,35 @@ class Manager:
             (board.BUTTON_UP, board.BUTTON_DOWN), value_when_pressed=False, pull=True
         ) as keys:
             while True:
-                key_event = keys.events.get()
+                key_event = keys.events.get()                
                 if key_event and key_event.pressed:
                     key_number = key_event.key_number
-                    self.last_pressed = key_number
+                    self.state["button"] = key_number
                 await asyncio.sleep(0)
 
     async def loop(self):
-        print(f"Manager > Loop: Init")
+        print(f"Manager > Loop Init")
         gc.collect()
         if NTP_ENABLE:
             asyncio.create_task(self.ntp_update())
         asyncio.create_task(self.check_gpio_buttons())
+        asyncio.create_task(self.mqtt.poll())
         await asyncio.create_task(self.theme.setup())
         self.mqtt.subscribe("test/topic", 1)
-        print(f"Manager > Loop: Start")
+        print("Manager > Loop Start: Mem={}".format(gc.mem_free()))
         while True:
             gc.collect()
             frame = self.state["frame"]
-            await asyncio.create_task(self.theme.loop(button=self.last_pressed))
-            await asyncio.create_task(self.mqtt.poll())
-            self.last_pressed = None
+            button = self.state["button"]
+            await asyncio.create_task(self.theme.loop())
+            if button is not None:
+                await asyncio.create_task(self.theme.on_button(button))
+                self.state["button"] = None
             self.state["frame"] = frame + 1
             if self.debug:
-                print(
-                    "Manager > Debug: Mem={} | Frame={}".format(
-                        gc.mem_free(), self.state["frame"]
+                if frame % 100 == 0:
+                    print(
+                        "Manager > Debug: Mem={} | Frame={}".format(
+                            gc.mem_free(), self.state["frame"]
+                        )
                     )
-                )
