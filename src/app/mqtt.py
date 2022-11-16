@@ -18,10 +18,10 @@ class MQTTClient:
         self.connect()
         gc.collect()
 
-    async def poll(self, timeout=0.0001):
+    async def poll(self, timeout=0.000001):
         while True:
             self._client.loop(timeout=timeout)
-            await asyncio.sleep(timeout*2)
+            await asyncio.sleep(timeout)
 
     def connect(self):
         self._client.connect()

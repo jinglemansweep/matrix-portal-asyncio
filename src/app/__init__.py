@@ -97,7 +97,6 @@ class Manager:
         self.mqtt.subscribe("test/topic", 1)
         print("Manager > Loop Start: Mem={}".format(gc.mem_free()))
         while True:
-            gc.collect()
             frame = self.state["frame"]
             button = self.state["button"]
             await asyncio.create_task(self.theme.loop())
@@ -105,8 +104,9 @@ class Manager:
                 await asyncio.create_task(self.theme.on_button(button))
                 self.state["button"] = None
             self.state["frame"] = frame + 1
-            if self.debug:
-                if frame % 100 == 0:
+            if frame % 100 == 0:
+                gc.collect()
+                if self.debug:
                     print(
                         "Manager > Debug: Mem={} | Frame={}".format(
                             gc.mem_free(), self.state["frame"]
