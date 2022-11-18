@@ -2,6 +2,7 @@ import asyncio
 import board
 from busio import I2C
 import gc
+import json
 from keypad import Keys
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 import adafruit_minimqtt.adafruit_minimqtt as MQTT
@@ -15,7 +16,7 @@ from secrets import secrets
 
 
 from app.utils import matrix_rotation, parse_timestamp, load_sprites_brightness_adjusted
-from app.hass import advertise_hass_entity, build_topic_prefix, HASS_ENTITY_ID_PREFIX
+from app.hass import HASS
 from app.themes._common import build_splash_group
 
 # Constants
@@ -67,24 +68,20 @@ class Manager:
             mac[0], mac[1], mac[2], mac[3]
         )
         gc.collect()
+        # State
+        self._initial_state()
         # MQTT
         MQTT.set_socket(socket, self.network._wifi.esp)  # network._wifi.esp
         self.group_splash[1].text = "mqtt"
         self._setup_mqtt_client()
         gc.collect()
+        # Home Assistant
+        self.hass = HASS(self.mqtt, self.device_id, self.state)
+        self._setup_hass_entities()
         # Theme
         self.group_splash[1].text = "themes"
         self.themes = self._install_themes(themes)
         gc.collect()
-        # State
-        self.state = {
-            "frame": 0,
-            "theme": 0,
-            "button": None,
-            "blank": False,
-            "time_visible": True,
-            "date_visible": True,
-        }
 
     def run(self):
         print(f"Manager > Run")
@@ -103,7 +100,6 @@ class Manager:
             asyncio.create_task(self._ntp_update())
         asyncio.create_task(self._check_gpio_buttons())
         asyncio.create_task(self._mqtt_poll())
-        self.group_splash[1].text = "almost done"
         await asyncio.create_task(self._setup_themes())
         self.mqtt.subscribe(f"matrixportal/{self.device_id}/#", 1)
         print(
@@ -119,11 +115,13 @@ class Manager:
         theme_idx = self.state["theme"]
         frame = self.state["frame"]
         button = self.state["button"]
-        blank = self.state["blank"]
+        entity_power = self.hass.entities.get("power")
         theme = self.get_theme()
-        await theme.tick(self.state)
+        await theme.tick(self.state, self.hass.entities)
         group = await theme.render_group()
-        self.display.show(group if not blank else Group())
+        self.display.show(
+            group if entity_power.get_state().get("state") == "ON" else Group()
+        )
         if button is not None:
             if button == BUTTON_THEME_ACTION:
                 await asyncio.create_task(theme.on_button())
@@ -184,26 +182,6 @@ class Manager:
         self.mqtt.on_disconnect = self._on_mqtt_disconnect
         self.mqtt.on_message = self._on_mqtt_message
         self.mqtt.connect()
-        advertise_hass_entity(
-            self.mqtt,
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_visible",
-            "switch",
-        )
-        advertise_hass_entity(
-            self.mqtt,
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_date_visible",
-            "switch",
-        )
-        advertise_hass_entity(
-            self.mqtt,
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_time_visible",
-            "switch",
-        )
-        advertise_hass_entity(
-            self.mqtt,
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_theme_next",
-            "switch",
-        )
         gc.collect()
 
     async def _mqtt_poll(self, timeout=0.000001):
@@ -213,37 +191,69 @@ class Manager:
 
     def _on_mqtt_message(self, client, topic, message):
         print(f"MQTT > Message: Topic={topic} | Message={message}")
+        # MESSAGE: POWER
+        entity_power = self.hass.entities.get("power")
+        if topic == entity_power.topic_command:
+            entity_power.update(dict(state="ON" if message == "ON" else "OFF"))
+        # MESSAGE: DATE_RGB
+        entity_date_rgb = self.hass.entities.get("date_rgb")
+        if topic == entity_date_rgb.topic_command:
+            entity_date_rgb.update(json.loads(message))
+        # MESSAGE: TIME_RGB
+        entity_time_rgb = self.hass.entities.get("time_rgb")
+        if topic == entity_time_rgb.topic_command:
+            entity_time_rgb.update(json.loads(message))
 
-        prefix_visible = build_topic_prefix(
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_visible", "switch"
-        )
-        if topic == f"{prefix_visible}/set":
-            on = "on" in message.lower()
-            self.state["blank"] = not on
-
-        prefix_date_visible = build_topic_prefix(
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_date_visible", "switch"
-        )
-        if topic == f"{prefix_date_visible}/set":
-            self.state["date_visible"] = "on" in message.lower()
-
-        prefix_time_visible = build_topic_prefix(
-            f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_time_visible", "switch"
-        )
-        if topic == f"{prefix_time_visible}/set":
-            self.state["time_visible"] = "on" in message.lower()
-
+        """
         prefix_theme_next = build_topic_prefix(
             f"{HASS_ENTITY_ID_PREFIX}{self.device_id}_theme_next", "switch"
         )
         if topic == f"{prefix_theme_next}/set":
             self.set_next_theme()
+        """
 
     def _on_mqtt_connect(self, client, userdata, flags, rc):
         print("MQTT > Connected: Flags={} | RC={}".format(flags, rc))
 
     def _on_mqtt_disconnect(self, client, userdata, rc):
         print("MQTT > Disconnected")
+
+    def _setup_hass_entities(self):
+        POWER_STATE = True
+        self.hass.entities["power"] = self.hass.add_entity(
+            "power",
+            "switch",
+            dict(),
+            dict(state="ON" if POWER_STATE else "OFF"),
+        )
+        DATE_RGB_STATE = True
+        DATE_RGB_COLOR = dict(r=0x00, g=0xFF, b=0x00)
+        DATE_RGB_BRIGHTNESS = 255
+        self.hass.entities["date_rgb"] = self.hass.add_entity(
+            "date_rgb",
+            "light",
+            dict(color_mode=True, supported_color_modes=["rgb"], brightness=True),
+            dict(
+                state="ON" if DATE_RGB_STATE else "OFF",
+                color=DATE_RGB_COLOR,
+                brightness=DATE_RGB_BRIGHTNESS,
+                color_mode="rgb",
+            ),
+        )
+        TIME_RGB_STATE = True
+        TIME_RGB_COLOR = dict(r=0xFF, g=0xFF, b=0xFF)
+        TIME_RGB_BRIGHTNESS = 255
+        self.hass.entities["time_rgb"] = self.hass.add_entity(
+            "time_rgb",
+            "light",
+            dict(color_mode=True, supported_color_modes=["rgb"], brightness=True),
+            dict(
+                state="ON" if TIME_RGB_STATE else "OFF",
+                color=TIME_RGB_COLOR,
+                brightness=TIME_RGB_BRIGHTNESS,
+                color_mode="rgb",
+            ),
+        )
 
     def _install_themes(self, theme_classes):
         themes = []
@@ -263,3 +273,11 @@ class Manager:
         for theme in self.themes:
             await theme.setup()
             gc.collect()
+
+    def _initial_state(self):
+        self.state = {
+            "frame": 0,
+            "theme": 0,
+            "button": None,
+            "blank": False,
+        }

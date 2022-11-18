@@ -68,18 +68,18 @@ class MarioRandomTheme(BaseTheme):
         await self.update_background()
         gc.collect()
 
-    async def tick(self, state):
+    async def tick(self, state, entities):
         frame = state["frame"]
         if frame % 1000 == 0:
             if (self.sprite_mario.x <= -16 or self.sprite_mario.x >= 64) and (
                 self.sprite_goomba.x <= -16 or self.sprite_goomba.x >= 64
             ):
                 await self.update_background()
-        self.label_clock.tick(state)
-        self.label_calendar.tick(state)
-        self.sprite_mario.tick(state)
-        self.sprite_goomba.tick(state)
-        await super().tick(state)
+        self.label_clock.tick(state, entities)
+        self.label_calendar.tick(state, entities)
+        self.sprite_mario.tick(state, entities)
+        self.sprite_goomba.tick(state, entities)
+        await super().tick(state, entities)
 
     async def on_button(self):
         await self.update_background()
@@ -117,9 +117,7 @@ class MarioRandomTheme(BaseTheme):
         # Set pipe colour to blue (blue bin) or grey (black bin) collection reminder
         # Between midday Thursday and midday Friday, collection is Friday morning usually
         pipe_color = None
-        if (now.tm_wday == 3 and now.tm_hour > 12) or (
-            now.tm_wday == 4 and now.tm_hour < 12
-        ):
+        if now.tm_wday == 3 and now.tm_hour > 12:
             pipe_color = (
                 PipeSprite.PALETTE_BLUE if alt_week else PipeSprite.PALETTE_GREY
             )

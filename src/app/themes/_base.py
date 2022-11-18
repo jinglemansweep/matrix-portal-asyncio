@@ -27,7 +27,7 @@ class BaseTheme:
         return self.group
 
     # Run every frame so theme can animate itself and perform other actions
-    async def tick(self, state):
+    async def tick(self, state, entities):
         pass
         # print("Theme > Tick: Frame={}".format(state["frame"]))
 
@@ -95,7 +95,7 @@ class BaseSprite(TileGrid):
             self.y_velocity = 0
             self.y_dest = None
 
-    def tick(self, frame):
+    def tick(self, frame, entities):
         self.update_move_velocities()
         self.reseed()
         self.x += self.x_velocity

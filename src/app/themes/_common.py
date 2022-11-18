@@ -18,9 +18,9 @@ class ClockLabel(Label):
         self.y = y
         self.new_second = None
 
-    def tick(self, state):
+    def tick(self, state, entities):
         frame = state["frame"]
-        self.hidden = not state["time_visible"]
+        self.hidden = entities.get("time_rgb").get_state().get("state") == "OFF"
         now = RTC().datetime
         ts = time.monotonic()
         if self.new_second is None or ts > self.new_second + 1:
@@ -40,9 +40,9 @@ class CalendarLabel(Label):
         self.new_minute = None
         self.new_second = None
 
-    def tick(self, state):
+    def tick(self, state, entities):
         frame = state["frame"]
-        self.hidden = not state["date_visible"]
+        self.hidden = entities.get("date_rgb").get_state().get("state") == "OFF"
         now = RTC().datetime
         ts = time.monotonic()
         if self.new_second is None or ts > self.new_second + 1:

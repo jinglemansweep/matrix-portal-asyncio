@@ -44,7 +44,7 @@ class MarioSprite(BaseSprite):
             self.is_jumping = True
             self.y_float -= 10
 
-    def tick(self, state):
+    def tick(self, state, entities):
         frame = state["frame"]
         if frame % 800 == 0:
             self.jump()
@@ -74,7 +74,7 @@ class MarioSprite(BaseSprite):
             else (SPRITE_MARIO_R_STILL if facing_right else SPRITE_MARIO_L_STILL)
         )
         self.y = int(self.y_float)
-        super().tick(frame)
+        super().tick(frame, entities)
 
 
 class GoombaSprite(BaseSprite):
@@ -91,7 +91,7 @@ class GoombaSprite(BaseSprite):
         self.x_range = [-32, 96]
         self.idx_sprite = 0
 
-    def tick(self, state):
+    def tick(self, state, entities):
         frame = state["frame"]
         if self.seed >= 0 and self.seed <= 5:
             self.move_to(x=random.randint(self.x_range[0], self.x_range[1]))
@@ -104,7 +104,7 @@ class GoombaSprite(BaseSprite):
             if self.x_velocity != 0
             else SPRITE_GOOMBA_STILL
         )
-        super().tick(frame)
+        super().tick(frame, entities)
 
 
 class BrickSprite(BaseSprite):
